@@ -22,6 +22,12 @@ export const canViewReports = (role: UserRole) =>
 export const canViewFindingIncidents = (role: UserRole) =>
   role !== "administrador";
 
+export const canViewWorkerDetail = (role: UserRole) =>
+  role === "prevencionista" ||
+  role === "supervisor" ||
+  role === "administrador" ||
+  role === "auditor";
+
 export const canManageDocuments = (role: UserRole) =>
   role === "prevencionista" ||
   role === "supervisor" ||

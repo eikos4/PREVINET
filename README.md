@@ -1,73 +1,131 @@
-# React + TypeScript + Vite
-
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
-
-Currently, two official plugins are available:
-
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Babel](https://babeljs.io/) (or [oxc](https://oxc.rs) when used in [rolldown-vite](https://vite.dev/guide/rolldown)) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
-
-## React Compiler
-
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
-
-## Expanding the ESLint configuration
-
-If you are developing a production application, we recommend updating the configuration to enable type-aware lint rules:
-
-```js
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-
-      // Remove tseslint.configs.recommended and replace with this
-      tseslint.configs.recommendedTypeChecked,
-      // Alternatively, use this for stricter rules
-      tseslint.configs.strictTypeChecked,
-      // Optionally, add this for stylistic rules
-      tseslint.configs.stylisticTypeChecked,
-
-      // Other configs...
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
-```
-
-You can also install [eslint-plugin-react-x](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-x) and [eslint-plugin-react-dom](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-dom) for React-specific lint rules:
-
-```js
-// eslint.config.js
-import reactX from 'eslint-plugin-react-x'
-import reactDom from 'eslint-plugin-react-dom'
-
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-      // Enable lint rules for React
-      reactX.configs['recommended-typescript'],
-      // Enable lint rules for React DOM
-      reactDom.configs.recommended,
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
-```
+# PREVINET (Hackatón)
+ 
+ Plataforma **offline-first** para gestión preventiva en terreno. Incluye enrolamiento de trabajadores, módulos de firma digital y generación/estampado de firma en PDF.
+ 
+ ## Demo / Deploy
+ 
+ - Producción (Netlify): https://previnet-kodesk.netlify.app
+ 
+ ## Stack
+ 
+ - React + TypeScript
+ - Vite
+ - Tailwind CSS
+ - Dexie (IndexedDB) para persistencia local
+ - PDF: `pdf-lib` + `jspdf`
+ 
+ ## Requisitos
+ 
+ - Node.js LTS (recomendado 18+)
+ - npm
+ 
+ ## Levantar el proyecto
+ 
+ 1) Instalar dependencias
+ 
+ ```bash
+ npm install
+ ```
+ 
+ 2) Modo desarrollo
+ 
+ ```bash
+ npm run dev
+ ```
+ 
+ 3) Build producción
+ 
+ ```bash
+ npm run build
+ ```
+ 
+ 4) Preview del build
+ 
+ ```bash
+ npm run preview
+ ```
+ 
+ ## Scripts
+ 
+ - `npm run dev`: servidor de desarrollo (Vite)
+ - `npm run build`: TypeScript build + bundle producción
+ - `npm run preview`: servir `dist/` localmente
+ - `npm run lint`: lint del proyecto
+ 
+ ## Funcionalidad principal
+ 
+ - **Enrolamiento**: alta/actualización de trabajadores.
+ - **Firma digital**: firma de asignaciones por trabajador (captura de firma + persistencia).
+ - **PDF firmado**: generación de PDF y estampado de firma sobre adjuntos PDF cuando aplique.
+ - **Offline-first**: trabajo sin internet usando IndexedDB; la app está pensada para operación en terreno.
+ 
+ ## Roles y navegación
+ 
+ La UI es **role-based** (sidebar y permisos).
+ 
+ Roles típicos:
+ - `trabajador`
+ - `prevencionista`
+ - `supervisor`
+ - `administrador`
+ - `auditor`
+ - `admin`
+ 
+ Para `trabajador` existe un **Inicio** guiado (journey) que fuerza completar firmas paso a paso.
+ 
+ ## Módulos
+ 
+ El código se organiza en `src/modules/*`:
+ 
+ - `enrollment`: enrolamiento / formularios iniciales
+ - `workers`: mantenimiento de trabajadores + perfil + journey
+ - `art`: ART/AST (incluye verificación de lectura/preguntas antes de firmar cuando corresponda)
+ - `irl`: IRL (lectura/confirmación + firma)
+ - `documents`: documentos asignados + firma
+ - `talks`: charlas + firma
+ - `fitForWork`: cuestionario + firma
+ - `findingIncidents`: hallazgos/incidencias
+ - `dashboard`: dashboard para perfiles con acceso
+ 
+ ## Persistencia offline
+ 
+ - Base local en `src/offline/db.ts` (Dexie / IndexedDB).
+ - Servicios de sincronización en `src/offline/*` y `src/services/sync.service.ts`.
+ 
+ ## Estructura del proyecto
+ 
+ ```text
+ src/
+   app/                 # App principal, rutas y layout
+   components/          # Componentes compartidos (ErrorBoundary, etc.)
+   hooks/               # Hooks compartidos
+   modules/             # Módulos funcionales por dominio
+   offline/             # IndexedDB + cola/sync offline
+   services/            # Servicios comunes (api/network/sync)
+   styles/              # Estilos base
+ public/                # Assets estáticos
+ ```
+ 
+ ## Deploy a Netlify
+ 
+ Este repo incluye `netlify.toml`:
+ 
+ - Build command: `npm run build`
+ - Publish dir: `dist`
+ - Redirect SPA (`/* -> /index.html`) para que el router funcione al refrescar.
+ 
+ Deploy manual (CLI):
+ 
+ ```bash
+ npm run build
+ npx netlify-cli deploy --prod --dir=dist
+ ```
+ 
+ ## Troubleshooting
+ 
+ - Si aparece pantalla en blanco, revisar consola; existe `ErrorBoundary` global para visualizar errores runtime.
+ - Para routing en producción, asegúrate de mantener el redirect SPA (Netlify).
+ 
+ ## Licencia
+ 
+ Este proyecto está bajo **Licencia Propietaria KODESK**. Ver archivo `LICENSE`.

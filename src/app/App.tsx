@@ -43,9 +43,12 @@ import OnlineStatus from "../components/OnlineStatus";
 
 import AdminUsers from "../modules/admin/AdminUsers.tsx";
 
+import PrevencionistaTimelineView from "../modules/prevencionista/PrevencionistaTimelineView";
+
 import {
   canViewDashboard,
   canManageWorkers,
+  canViewWorkerDetail,
   canManageDocuments,
   canViewDocuments,
   canManageIRL,
@@ -65,7 +68,7 @@ import {
 } from "../modules/auth/permissions";
 
 type View = "landing" | "login" | "app";
-type Section = "inicio" | "dashboard" | "workers" | "art" | "profile" | "irl" | "talks" | "fitForWork" | "findingIncidents" | "documents" | "adminUsers";
+type Section = "inicio" | "dashboard" | "workers" | "workerTimeline" | "art" | "profile" | "irl" | "talks" | "fitForWork" | "findingIncidents" | "documents" | "adminUsers";
 
 export default function App() {
   const [view, setView] = useState<View>("landing");
@@ -168,6 +171,7 @@ export default function App() {
     if (role === "trabajador") s.push("profile");
     if (canViewDashboard(role)) s.push("dashboard");
     if (canManageWorkers(role)) s.push("workers");
+    if (canViewWorkerDetail(role)) s.push("workerTimeline");
     if (canManageDocuments(role)) s.push("documents");
     if (canViewDocuments(role)) s.push("documents");
     if (canManageIRL(role)) s.push("irl");
@@ -222,6 +226,8 @@ export default function App() {
         return "Dashboard";
       case "workers":
         return "Trabajadores";
+      case "workerTimeline":
+        return "Línea de tiempo";
       case "art":
         return "ART";
       case "profile":
@@ -252,8 +258,6 @@ export default function App() {
         <div className="landing-shell">
           <div className="landing-card landing-hero">
             <img className="landing-logo" src="/logo.png" alt="PreviNet" />
-
-           
 
             <p className="landing-subtitle">
               Plataforma preventiva <strong>offline-first</strong>
@@ -323,6 +327,7 @@ export default function App() {
     { key: "profile", label: "Mi perfil", icon: "🙍", visible: role === "trabajador" },
     { key: "dashboard", label: "Dashboard", icon: "📊", visible: canViewDashboard(role) },
     { key: "workers", label: "Trabajadores", icon: "👷", visible: canManageWorkers(role) },
+    { key: "workerTimeline", label: "Línea de tiempo", icon: "🕒", visible: canViewWorkerDetail(role) },
     { key: "documents", label: "Documentos", icon: "📎", visible: canSeeDocuments },
     { key: "irl", label: "IRL", icon: "🧾", visible: canSeeIRL },
     { key: "talks", label: "Charlas", icon: "🗣️", visible: canSeeTalks },
@@ -466,6 +471,10 @@ export default function App() {
             )}
             <WorkerList key={`w-${reload}`} readOnly={readOnly} />
           </>
+        )}
+
+        {section === "workerTimeline" && canViewWorkerDetail(role) && (
+          <PrevencionistaTimelineView />
         )}
 
         {section === "documents" && canManageDocuments(role) && (
