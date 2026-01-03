@@ -24,10 +24,14 @@ export default function FindingIncidentList({
   readOnly,
   currentUserId,
   reloadKey,
+  variant = "page",
+  onMutated,
 }: {
   readOnly: boolean;
   currentUserId?: string;
   reloadKey: number;
+  variant?: "page" | "embedded";
+  onMutated?: () => void;
 }) {
   const [items, setItems] = useState<FindingIncident[]>([]);
   const [expandedIds, setExpandedIds] = useState<Set<string>>(() => new Set());
@@ -80,6 +84,7 @@ export default function FindingIncidentList({
     try {
       await updateFindingIncidentStatus(id, estado);
       setItems(await getFindingIncidents());
+      onMutated?.();
     } catch (e) {
       setError(e instanceof Error ? e.message : "No se pudo actualizar estado");
     } finally {
@@ -93,6 +98,7 @@ export default function FindingIncidentList({
     try {
       await addFindingIncidentFollowUp(id, texto, currentUserId);
       setItems(await getFindingIncidents());
+      onMutated?.();
     } catch (e) {
       setError(e instanceof Error ? e.message : "No se pudo agregar seguimiento");
     } finally {
@@ -107,12 +113,262 @@ export default function FindingIncidentList({
     try {
       await addFindingIncidentEvidences(id, files);
       setItems(await getFindingIncidents());
+      onMutated?.();
     } catch (e) {
       setError(e instanceof Error ? e.message : "No se pudo adjuntar evidencia");
     } finally {
       setBusyId(null);
     }
   };
+
+  const listContent = (
+    <>
+      {error && (
+        <div className="mb-6 bg-red-50 border border-red-200 rounded-lg p-4">
+          <p className="text-red-700 text-sm font-medium m-0">⚠️ {error}</p>
+        </div>
+      )}
+
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 mb-5">
+        <input
+          className="border border-gray-200 rounded-lg px-3 py-2 text-sm"
+          placeholder="Buscar por obra/lugar/descripcion…"
+          value={q}
+          onChange={(e) => setQ(e.target.value)}
+        />
+
+        <select
+          className="border border-gray-200 rounded-lg px-3 py-2 text-sm"
+          value={filterTipo}
+          onChange={(e) => setFilterTipo(e.target.value as any)}
+        >
+          <option value="">Todos los tipos</option>
+          <option value="HALLAZGO">Hallazgo</option>
+          <option value="INCIDENCIA">Incidencia</option>
+        </select>
+
+        <select
+          className="border border-gray-200 rounded-lg px-3 py-2 text-sm"
+          value={filterEstado}
+          onChange={(e) => setFilterEstado(e.target.value as any)}
+        >
+          <option value="">Todos los estados</option>
+          <option value="ABIERTO">ABIERTO</option>
+          <option value="EN_PROCESO">EN PROCESO</option>
+          <option value="CERRADO">CERRADO</option>
+        </select>
+      </div>
+
+      {filtered.length === 0 ? (
+        <div className="p-10 text-center">
+          <p className="text-gray-400 text-base m-0">No hay registros aún.</p>
+        </div>
+      ) : (
+        <div className="space-y-4">
+          {filtered.map((x) => {
+            const expanded = expandedIds.has(x.id);
+            const badgeColor =
+              x.estado === "CERRADO"
+                ? "bg-slate-100 text-slate-700"
+                : x.estado === "EN_PROCESO"
+                  ? "bg-slate-200 text-slate-700"
+                  : "bg-slate-900 text-white";
+
+            return (
+              <div
+                key={x.id}
+                className="border border-gray-200 rounded-xl bg-white hover:border-slate-300 hover:shadow-md transition-all duration-200"
+              >
+                <button
+                  className="w-full p-4 sm:p-6 text-left hover:bg-gray-50/60 transition-colors cursor-pointer focus:outline-none focus:ring-2 focus:ring-slate-500 focus:ring-inset"
+                  onClick={() => onToggleExpand(x.id)}
+                >
+                  <div className="flex flex-col sm:flex-row items-start gap-3 sm:gap-4 justify-between">
+                    <div className="flex-1">
+                      <div className="flex items-center gap-2 mb-2">
+                        <span className="text-lg font-bold text-gray-900">
+                          {x.tipo === "HALLAZGO" ? "Hallazgo" : "Incidencia"}
+                        </span>
+                        <span className={`inline-block px-3 py-1 rounded-full text-xs font-semibold ${badgeColor}`}>
+                          {x.estado}
+                        </span>
+                        <span className="inline-block bg-slate-100 text-slate-700 px-3 py-1 rounded-full text-xs font-semibold">
+                          {x.obra}
+                        </span>
+                      </div>
+
+                      <p className="text-sm text-gray-600 mb-2 m-0">{x.lugar}</p>
+                      <p className="text-sm text-gray-900 m-0 line-clamp-2">{x.descripcion}</p>
+
+                      <div className="mt-3 text-xs text-gray-500">
+                        {formatDate(x.fecha)}{x.hora ? ` · ${x.hora}` : ""}
+                        {x.creadoEn ? ` · creado ${formatDateTime(x.creadoEn)}` : ""}
+                      </div>
+                    </div>
+
+                    <div className="flex-shrink-0 text-slate-700 text-xl">{expanded ? "▼" : "▶"}</div>
+                  </div>
+                </button>
+
+                {expanded && (
+                  <div className="border-t border-gray-200 bg-gray-50/50 p-4 sm:p-6">
+                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                      <div className="bg-white border border-gray-200 rounded-lg p-4">
+                        <div className="text-sm font-bold text-gray-900 mb-2">Detalles</div>
+                        <div className="text-sm text-gray-700">
+                          <div>
+                            <strong>Obra:</strong> {x.obra}
+                          </div>
+                          <div>
+                            <strong>Lugar:</strong> {x.lugar}
+                          </div>
+                          <div>
+                            <strong>Fecha:</strong> {formatDate(x.fecha)}{x.hora ? ` ${x.hora}` : ""}
+                          </div>
+                          <div style={{ marginTop: "0.5rem" }}>
+                            <strong>Descripción:</strong> {x.descripcion}
+                          </div>
+                        </div>
+                      </div>
+
+                      <div className="bg-white border border-gray-200 rounded-lg p-4">
+                        <div className="text-sm font-bold text-gray-900 mb-2">Información específica</div>
+                        {x.tipo === "HALLAZGO" ? (
+                          <div className="text-sm text-gray-700">
+                            <div>
+                              <strong>Riesgo potencial:</strong> {x.riesgoPotencial ?? "-"}
+                            </div>
+                            <div>
+                              <strong>Responsable:</strong> {x.responsable ?? "-"}
+                            </div>
+                            <div>
+                              <strong>Recomendación:</strong> {x.recomendacion ?? "-"}
+                            </div>
+                            <div>
+                              <strong>Plazo:</strong> {x.plazoResolver ?? "-"}
+                            </div>
+                          </div>
+                        ) : (
+                          <div className="text-sm text-gray-700">
+                            <div>
+                              <strong>Involucrados:</strong> {x.personasInvolucradas ?? "-"}
+                            </div>
+                            <div>
+                              <strong>Consecuencias:</strong> {x.consecuencias ?? "-"}
+                            </div>
+                            <div>
+                              <strong>Causas probables:</strong> {x.causasProbables ?? "-"}
+                            </div>
+                            <div>
+                              <strong>Medidas inmediatas:</strong> {x.medidasInmediatas ?? "-"}
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+
+                    <div className="mt-4 bg-white border border-gray-200 rounded-lg p-4">
+                      <div className="flex items-center justify-between gap-2">
+                        <div className="text-sm font-bold text-gray-900">Evidencias</div>
+                        {!readOnly && (
+                          <label className="text-sm font-medium text-slate-700">
+                            <input
+                              type="file"
+                              multiple
+                              className="text-sm"
+                              onChange={(e) =>
+                                onAddEvidences(x.id, Array.from(e.target.files ?? []))
+                              }
+                              disabled={busyId === x.id}
+                            />
+                          </label>
+                        )}
+                      </div>
+
+                      {(x.evidencias ?? []).length === 0 ? (
+                        <div className="text-sm text-gray-500 mt-2">Sin evidencias.</div>
+                      ) : (
+                        <div className="mt-3 grid gap-2">
+                          {(x.evidencias ?? []).map((ev) => (
+                            <div
+                              key={ev.id}
+                              className="flex items-center justify-between gap-2 bg-gray-50 border border-gray-200 rounded-lg p-3"
+                            >
+                              <div className="text-sm text-gray-800 truncate">{ev.fileName}</div>
+                              <button
+                                type="button"
+                                className="bg-slate-800 hover:bg-slate-900 text-white px-3 py-1.5 rounded-lg text-xs font-semibold"
+                                onClick={() => downloadBlobAsFile(ev.blob, ev.fileName)}
+                              >
+                                Descargar
+                              </button>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+
+                    <div className="mt-4 grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div className="bg-white border border-gray-200 rounded-lg p-4">
+                        <div className="text-sm font-bold text-gray-900 mb-2">Seguimiento</div>
+
+                        {(x.seguimiento ?? []).length === 0 ? (
+                          <div className="text-sm text-gray-500">Sin seguimiento.</div>
+                        ) : (
+                          <div className="grid gap-2">
+                            {(x.seguimiento ?? []).map((s) => (
+                              <div key={s.id} className="bg-gray-50 border border-gray-200 rounded-lg p-3">
+                                <div className="text-sm text-gray-900">{s.texto}</div>
+                                <div className="text-xs text-gray-500 mt-1">{formatDateTime(s.creadoEn)}</div>
+                              </div>
+                            ))}
+                          </div>
+                        )}
+
+                        {!readOnly && (
+                          <FollowUpComposer
+                            disabled={busyId === x.id}
+                            onSubmit={(texto) => onAddFollowUp(x.id, texto)}
+                          />
+                        )}
+                      </div>
+
+                      <div className="bg-white border border-gray-200 rounded-lg p-4">
+                        <div className="text-sm font-bold text-gray-900 mb-2">Estado</div>
+
+                        <div className="text-sm text-gray-700 mb-3">
+                          Estado actual: <strong>{x.estado}</strong>
+                        </div>
+
+                        {!readOnly && (
+                          <select
+                            className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm"
+                            value={x.estado}
+                            disabled={busyId === x.id}
+                            onChange={(e) => onChangeStatus(x.id, e.target.value as any)}
+                          >
+                            <option value="ABIERTO">ABIERTO</option>
+                            <option value="EN_PROCESO">EN PROCESO</option>
+                            <option value="CERRADO">CERRADO</option>
+                          </select>
+                        )}
+
+                        {x.cerradoEn && (
+                          <div className="text-xs text-gray-500 mt-3">Cerrado: {formatDateTime(x.cerradoEn)}</div>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </div>
+            );
+          })}
+        </div>
+      )}
+    </>
+  );
+
+  if (variant === "embedded") return <div>{listContent}</div>;
 
   return (
     <div className="w-full max-w-5xl mx-auto px-4 py-6">
@@ -129,251 +385,7 @@ export default function FindingIncidentList({
           </div>
         </div>
 
-        <div className="p-6">
-          {error && (
-            <div className="mb-6 bg-red-50 border-l-4 border-red-500 rounded-lg p-4">
-              <p className="text-red-700 text-sm font-medium m-0">⚠️ {error}</p>
-            </div>
-          )}
-
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-3 mb-5">
-            <input
-              className="border border-gray-200 rounded-lg px-3 py-2 text-sm"
-              placeholder="Buscar por obra/lugar/descripcion…"
-              value={q}
-              onChange={(e) => setQ(e.target.value)}
-            />
-
-            <select
-              className="border border-gray-200 rounded-lg px-3 py-2 text-sm"
-              value={filterTipo}
-              onChange={(e) => setFilterTipo(e.target.value as any)}
-            >
-              <option value="">Todos los tipos</option>
-              <option value="HALLAZGO">Hallazgo</option>
-              <option value="INCIDENCIA">Incidencia</option>
-            </select>
-
-            <select
-              className="border border-gray-200 rounded-lg px-3 py-2 text-sm"
-              value={filterEstado}
-              onChange={(e) => setFilterEstado(e.target.value as any)}
-            >
-              <option value="">Todos los estados</option>
-              <option value="ABIERTO">ABIERTO</option>
-              <option value="EN_PROCESO">EN PROCESO</option>
-              <option value="CERRADO">CERRADO</option>
-            </select>
-          </div>
-
-          {filtered.length === 0 ? (
-            <div className="p-10 text-center">
-              <p className="text-gray-400 text-base m-0">No hay registros aún.</p>
-            </div>
-          ) : (
-            <div className="space-y-4">
-              {filtered.map((x) => {
-                const expanded = expandedIds.has(x.id);
-                const badgeColor =
-                  x.estado === "CERRADO"
-                    ? "bg-emerald-100 text-emerald-700"
-                    : x.estado === "EN_PROCESO"
-                      ? "bg-amber-100 text-amber-700"
-                      : "bg-red-100 text-red-700";
-
-                return (
-                  <div
-                    key={x.id}
-                    className="border border-gray-200 rounded-xl bg-white hover:border-slate-300 hover:shadow-md transition-all duration-200"
-                  >
-                    <button
-                      className="w-full p-6 text-left hover:bg-gray-50/60 transition-colors cursor-pointer focus:outline-none focus:ring-2 focus:ring-slate-500 focus:ring-inset"
-                      onClick={() => onToggleExpand(x.id)}
-                    >
-                      <div className="flex items-start gap-4 justify-between">
-                        <div className="flex-1">
-                          <div className="flex items-center gap-2 mb-2">
-                            <span className="text-lg font-bold text-gray-900">
-                              {x.tipo === "HALLAZGO" ? "Hallazgo" : "Incidencia"}
-                            </span>
-                            <span className={`inline-block px-3 py-1 rounded-full text-xs font-semibold ${badgeColor}`}>
-                              {x.estado}
-                            </span>
-                            <span className="inline-block bg-slate-100 text-slate-700 px-3 py-1 rounded-full text-xs font-semibold">
-                              {x.obra}
-                            </span>
-                          </div>
-
-                          <p className="text-sm text-gray-600 mb-2 m-0">{x.lugar}</p>
-                          <p className="text-sm text-gray-900 m-0 line-clamp-2">{x.descripcion}</p>
-
-                          <div className="mt-3 text-xs text-gray-500">
-                            {formatDate(x.fecha)}{x.hora ? ` · ${x.hora}` : ""}
-                            {x.creadoEn ? ` · creado ${formatDateTime(x.creadoEn)}` : ""}
-                          </div>
-                        </div>
-
-                        <div className="flex-shrink-0 text-slate-700 text-xl">
-                          {expanded ? "▼" : "▶"}
-                        </div>
-                      </div>
-                    </button>
-
-                    {expanded && (
-                      <div className="border-t border-gray-200 bg-gray-50/50 p-6">
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                          <div className="bg-white border border-gray-200 rounded-lg p-4">
-                            <div className="text-sm font-bold text-gray-900 mb-2">Detalles</div>
-                            <div className="text-sm text-gray-700">
-                              <div><strong>Obra:</strong> {x.obra}</div>
-                              <div><strong>Lugar:</strong> {x.lugar}</div>
-                              <div><strong>Fecha:</strong> {formatDate(x.fecha)}{x.hora ? ` ${x.hora}` : ""}</div>
-                              <div style={{ marginTop: "0.5rem" }}><strong>Descripción:</strong> {x.descripcion}</div>
-                            </div>
-                          </div>
-
-                          <div className="bg-white border border-gray-200 rounded-lg p-4">
-                            <div className="text-sm font-bold text-gray-900 mb-2">Información específica</div>
-                            {x.tipo === "HALLAZGO" ? (
-                              <div className="text-sm text-gray-700">
-                                <div><strong>Riesgo potencial:</strong> {x.riesgoPotencial ?? "-"}</div>
-                                <div><strong>Responsable:</strong> {x.responsable ?? "-"}</div>
-                                <div><strong>Recomendación:</strong> {x.recomendacion ?? "-"}</div>
-                                <div><strong>Plazo:</strong> {x.plazoResolver ?? "-"}</div>
-                              </div>
-                            ) : (
-                              <div className="text-sm text-gray-700">
-                                <div><strong>Involucrados:</strong> {x.personasInvolucradas ?? "-"}</div>
-                                <div><strong>Consecuencias:</strong> {x.consecuencias ?? "-"}</div>
-                                <div><strong>Causas probables:</strong> {x.causasProbables ?? "-"}</div>
-                                <div><strong>Medidas inmediatas:</strong> {x.medidasInmediatas ?? "-"}</div>
-                              </div>
-                            )}
-                          </div>
-                        </div>
-
-                        <div className="mt-4 bg-white border border-gray-200 rounded-lg p-4">
-                          <div className="flex items-center justify-between gap-2">
-                            <div className="text-sm font-bold text-gray-900">Evidencias</div>
-                            {!readOnly && (
-                              <label className="text-sm font-medium text-slate-700">
-                                <input
-                                  type="file"
-                                  multiple
-                                  className="text-sm"
-                                  onChange={(e) =>
-                                    onAddEvidences(x.id, Array.from(e.target.files ?? []))
-                                  }
-                                  disabled={busyId === x.id}
-                                />
-                              </label>
-                            )}
-                          </div>
-
-                          {(x.evidencias ?? []).length === 0 ? (
-                            <div className="text-sm text-gray-500 mt-2">Sin evidencias.</div>
-                          ) : (
-                            <div className="mt-3 grid gap-2">
-                              {(x.evidencias ?? []).map((ev) => (
-                                <div
-                                  key={ev.id}
-                                  className="flex items-center justify-between gap-2 bg-gray-50 border border-gray-200 rounded-lg p-3"
-                                >
-                                  <div className="text-sm text-gray-800 truncate">
-                                    {ev.fileName}
-                                  </div>
-                                  <button
-                                    type="button"
-                                    className="bg-slate-800 hover:bg-slate-900 text-white px-3 py-1.5 rounded-lg text-xs font-semibold"
-                                    onClick={() => downloadBlobAsFile(ev.blob, ev.fileName)}
-                                  >
-                                    Descargar
-                                  </button>
-                                </div>
-                              ))}
-                            </div>
-                          )}
-                        </div>
-
-                        <div className="mt-4 grid grid-cols-1 md:grid-cols-2 gap-4">
-                          <div className="bg-white border border-gray-200 rounded-lg p-4">
-                            <div className="text-sm font-bold text-gray-900 mb-2">Seguimiento</div>
-
-                            {(x.seguimiento ?? []).length === 0 ? (
-                              <div className="text-sm text-gray-500">Sin seguimiento.</div>
-                            ) : (
-                              <div className="grid gap-2">
-                                {(x.seguimiento ?? []).map((s) => (
-                                  <div
-                                    key={s.id}
-                                    className="bg-gray-50 border border-gray-200 rounded-lg p-3"
-                                  >
-                                    <div className="text-sm text-gray-900">{s.texto}</div>
-                                    <div className="text-xs text-gray-500 mt-1">{formatDateTime(s.creadoEn)}</div>
-                                  </div>
-                                ))}
-                              </div>
-                            )}
-
-                            {!readOnly && (
-                              <FollowUpComposer
-                                disabled={busyId === x.id}
-                                onSubmit={(texto) => onAddFollowUp(x.id, texto)}
-                              />
-                            )}
-                          </div>
-
-                          <div className="bg-white border border-gray-200 rounded-lg p-4">
-                            <div className="text-sm font-bold text-gray-900 mb-2">Estado</div>
-
-                            <div className="text-sm text-gray-700 mb-3">
-                              Estado actual: <strong>{x.estado}</strong>
-                            </div>
-
-                            {!readOnly && (
-                              <div className="grid grid-cols-3 gap-2">
-                                <button
-                                  type="button"
-                                  className="bg-red-600 hover:bg-red-700 disabled:bg-gray-400 text-white px-3 py-2 rounded-lg text-sm font-semibold"
-                                  disabled={busyId === x.id}
-                                  onClick={() => onChangeStatus(x.id, "ABIERTO")}
-                                >
-                                  ABIERTO
-                                </button>
-                                <button
-                                  type="button"
-                                  className="bg-amber-600 hover:bg-amber-700 disabled:bg-gray-400 text-white px-3 py-2 rounded-lg text-sm font-semibold"
-                                  disabled={busyId === x.id}
-                                  onClick={() => onChangeStatus(x.id, "EN_PROCESO")}
-                                >
-                                  EN PROCESO
-                                </button>
-                                <button
-                                  type="button"
-                                  className="bg-emerald-600 hover:bg-emerald-700 disabled:bg-gray-400 text-white px-3 py-2 rounded-lg text-sm font-semibold"
-                                  disabled={busyId === x.id}
-                                  onClick={() => onChangeStatus(x.id, "CERRADO")}
-                                >
-                                  CERRAR
-                                </button>
-                              </div>
-                            )}
-
-                            {x.cerradoEn && (
-                              <div className="text-xs text-gray-500 mt-3">
-                                Cerrado: {formatDateTime(x.cerradoEn)}
-                              </div>
-                            )}
-                          </div>
-                        </div>
-                      </div>
-                    )}
-                  </div>
-                );
-              })}
-            </div>
-          )}
-        </div>
+        <div className="p-6">{listContent}</div>
       </div>
     </div>
   );

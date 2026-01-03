@@ -331,6 +331,27 @@ export async function saveSignedArtPdf(params: {
   };
 
   await db.table("artSignedPdfs").put(record);
+
+  try {
+    const { createNotification } = await import("../notifications/notifications.service");
+    let companyId: string | null = null;
+    try {
+      const obra = await db.table("obras").get((params.art as any).obra);
+      companyId = (obra as any)?.empresaId ?? null;
+    } catch {}
+    await createNotification({
+      type: "art_signed",
+      title: "ART firmada",
+      body: `${params.assignment.firmadoPorNombre ?? "Un trabajador"} firmó ART #${params.art.id}`,
+      toRole: "prevencionista",
+      companyId,
+      fromUserId: params.assignment.workerId,
+      related: { entity: "art", id: params.art.id }
+    });
+  } catch (e) {
+    console.error("No se pudo crear notificación (art_signed)", e);
+  }
+
   return record;
 }
 

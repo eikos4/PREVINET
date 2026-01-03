@@ -2,6 +2,8 @@ import { useEffect, useMemo, useState } from "react";
 import { addFitForWork } from "./fitForWork.service";
 import { getWorkers } from "../workers/worker.service";
 import type { Worker } from "../workers/worker.service";
+import { createObra, listObras, type Obra } from "../obras/obras.service";
+import { getCurrentUser } from "../auth/auth.service";
 
 export default function FitForWorkForm({
   onCreated,
@@ -12,13 +14,18 @@ export default function FitForWorkForm({
 }) {
   const [fecha, setFecha] = useState("");
   const [turno, setTurno] = useState<"mañana" | "tarde" | "noche">("mañana");
-  const [obra, setObra] = useState("");
+  const [obraId, setObraId] = useState<string>("");
+  const [obras, setObras] = useState<Obra[]>([]);
+  const [obraQuickName, setObraQuickName] = useState("");
   const [workers, setWorkers] = useState<Worker[]>([]);
   const [selected, setSelected] = useState<string[]>([]);
   const [error, setError] = useState("");
 
   useEffect(() => {
     getWorkers().then(setWorkers);
+    listObras()
+      .then((all) => setObras(all.filter((o) => o.estado !== "inactiva")))
+      .catch(() => setObras([]));
     const today = new Date().toISOString().split("T")[0];
     setFecha(today);
   }, []);
@@ -37,15 +44,26 @@ export default function FitForWorkForm({
       return;
     }
 
+    if (!obraId) {
+      setError("Selecciona la obra/faena");
+      return;
+    }
+
     if (selected.length === 0) {
       setError("Selecciona al menos un trabajador");
+      return;
+    }
+
+    const obra = obras.find((o) => o.id === obraId)?.nombre || "";
+    if (!obra.trim()) {
+      setError("Selecciona la obra/faena");
       return;
     }
 
     await addFitForWork({
       fecha,
       turno,
-      obra: obra.trim() || undefined,
+      obra,
       asignados: selected.map((workerId) => ({
         workerId,
         token: crypto.randomUUID(),
@@ -53,7 +71,8 @@ export default function FitForWorkForm({
       creadoPorUserId,
     });
 
-    setObra("");
+    setObraId("");
+    setObraQuickName("");
     setSelected([]);
     onCreated();
   };
@@ -88,8 +107,47 @@ export default function FitForWorkForm({
           </div>
 
           <div className="flex flex-col" style={{ gridColumn: "1 / -1" }}>
-            <span className="text-sm font-medium text-gray-500 mb-1">Obra/Faena (opcional)</span>
-            <input placeholder="Ej: Obra Central" value={obra} onChange={(e) => setObra(e.target.value)} />
+            <span className="text-sm font-medium text-gray-500 mb-1">Obra/Faena</span>
+            <select value={obraId} onChange={(e) => setObraId(e.target.value)}>
+              <option value="">Selecciona obra…</option>
+              {obras
+                .slice()
+                .sort((a, b) => (a.nombre || "").localeCompare(b.nombre || "", "es"))
+                .map((o) => (
+                  <option key={o.id} value={o.id}>
+                    {o.nombre}
+                  </option>
+                ))}
+            </select>
+
+            <div className="mt-2 flex flex-wrap items-center gap-2">
+              <input
+                className="flex-1 min-w-0 rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm placeholder:text-slate-400 focus:border-blue-500 focus:outline-none"
+                placeholder="Crear obra rápida…"
+                value={obraQuickName}
+                onChange={(e) => setObraQuickName(e.target.value)}
+              />
+              <button
+                type="button"
+                className="flex-none btn-secondary"
+                onClick={async () => {
+                  setError("");
+                  try {
+                    const user = await getCurrentUser();
+                    const created = await createObra({ nombre: obraQuickName, empresaId: user?.companyId ?? null });
+                    const next = await listObras();
+                    setObras(next.filter((o) => o.estado !== "inactiva"));
+                    setObraId(created.id);
+                    setObraQuickName("");
+                  } catch (e) {
+                    const msg = e instanceof Error ? e.message : "No se pudo crear la obra";
+                    setError(msg);
+                  }
+                }}
+              >
+                Crear
+              </button>
+            </div>
           </div>
         </div>
 

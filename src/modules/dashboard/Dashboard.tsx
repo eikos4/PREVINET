@@ -1,5 +1,7 @@
 import { useEffect, useState } from "react";
 import { db } from "../../offline/db";
+import { getCurrentUser, normalizeRole } from "../auth/auth.service";
+import { loadDemoData, resetDemoData } from "../../services/demo.service";
 
 type Stats = {
   workers: number;
@@ -342,6 +344,47 @@ export default function Dashboard() {
     loadStats();
   }, []);
 
+  const [isSuperadmin, setIsSuperadmin] = useState(false);
+  const [demoBusy, setDemoBusy] = useState(false);
+  const [demoMessage, setDemoMessage] = useState("");
+
+  useEffect(() => {
+    getCurrentUser().then((u) => {
+      if (u && normalizeRole(u.role) === "superadmin") setIsSuperadmin(true);
+    });
+  }, []);
+
+  const handleLoadDemo = async () => {
+    if (!window.confirm("¿Cargar datos de demo? Esto limpiará la base local.")) return;
+    setDemoBusy(true);
+    setDemoMessage("");
+    try {
+      await loadDemoData();
+      await loadStats();
+      setDemoMessage("Datos de demo cargados correctamente");
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : "No se pudo cargar la demo";
+      setDemoMessage(msg);
+    } finally {
+      setDemoBusy(false);
+    }
+  };
+
+  const handleResetDemo = async () => {
+    if (!window.confirm("¿Reset demo? Esto borrará TODOS los datos locales y te llevará al login.")) return;
+    setDemoBusy(true);
+    setDemoMessage("");
+    try {
+      await resetDemoData();
+      setDemoMessage("Demo reseteada");
+      window.location.reload();
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : "No se pudo resetear la demo";
+      setDemoMessage(msg);
+      setDemoBusy(false);
+    }
+  };
+
   const pendingIRL = Math.max(0, stats.irlAsignaciones - stats.irlFirmadas);
   const pendingTalks = Math.max(0, stats.talkAsignaciones - stats.talkFirmadas);
   const pendingFit = Math.max(0, stats.fitAsignacionesHoy - stats.fitFirmadasHoy);
@@ -358,6 +401,26 @@ export default function Dashboard() {
             Indicadores operativos para supervisión: firmas, pendientes y alertas.
           </p>
         </div>
+
+      {isSuperadmin && (
+        <div className="dashboard-pro-panel">
+          <div className="dashboard-pro-panel-header">
+            <div>
+              <div className="dashboard-pro-panel-title">Datos de demo</div>
+              <div className="dashboard-pro-panel-subtitle">Generar o limpiar datos locales de demostración</div>
+            </div>
+            <div className="flex items-center gap-2">
+              <button type="button" className="btn-secondary" onClick={handleLoadDemo} disabled={demoBusy}>
+                Cargar datos de demo
+              </button>
+              <button type="button" className="btn-secondary" onClick={handleResetDemo} disabled={demoBusy}>
+                Reset demo
+              </button>
+            </div>
+          </div>
+          {demoMessage && <div className="dashboard-pro-footnote">{demoMessage}</div>}
+        </div>
+      )}
 
         <button
           type="button"

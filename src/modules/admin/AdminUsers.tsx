@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import type { User } from "../auth/auth.service";
+import { normalizeRole } from "../auth/auth.service";
 import type { CreatableManagedRole } from "./adminUsers.service";
 import { createManagedUser, listManagedUsers } from "./adminUsers.service";
 
@@ -14,6 +15,7 @@ type FormState = {
   email: string;
   phone: string;
   position: string;
+  obra: string;
   companyName: string;
   companyRut: string;
   pin: string;
@@ -33,8 +35,9 @@ export default function AdminUsers({ currentUser }: Props) {
     email: "",
     phone: "",
     position: "",
-    companyName: currentUser.companyName ?? "",
-    companyRut: currentUser.companyRut ?? "",
+    obra: "",
+    companyName: normalizeRole(currentUser.role) === "superadmin" ? "" : (currentUser.companyName ?? ""),
+    companyRut: normalizeRole(currentUser.role) === "superadmin" ? "" : (currentUser.companyRut ?? ""),
     pin: "",
     confirmPin: "",
   });
@@ -56,6 +59,7 @@ export default function AdminUsers({ currentUser }: Props) {
   >([]);
 
   const companyRutFilter = useMemo(() => {
+    if (normalizeRole(currentUser.role) === "superadmin") return undefined;
     const rut = currentUser.companyRut?.trim();
     return rut ? rut : undefined;
   }, [currentUser.companyRut]);
@@ -106,6 +110,7 @@ export default function AdminUsers({ currentUser }: Props) {
         email: form.email.trim() || undefined,
         phone: form.phone.trim() || undefined,
         position: form.position.trim() || undefined,
+        obra: form.obra.trim() || undefined,
         companyName: form.companyName.trim(),
         companyRut: form.companyRut.trim(),
         pin: form.pin,
@@ -120,6 +125,7 @@ export default function AdminUsers({ currentUser }: Props) {
         email: "",
         phone: "",
         position: "",
+        obra: "",
         pin: "",
         confirmPin: "",
       }));
@@ -168,6 +174,7 @@ export default function AdminUsers({ currentUser }: Props) {
                   value={form.role}
                   onChange={(e) => handleChange("role", e.target.value)}
                 >
+                  <option value="trabajador">Trabajador</option>
                   <option value="prevencionista">Prevencionista</option>
                   <option value="supervisor">Supervisor</option>
                   <option value="auditor">Auditor</option>
@@ -206,6 +213,19 @@ export default function AdminUsers({ currentUser }: Props) {
                   onChange={(e) => handleChange("position", e.target.value)}
                 />
               </div>
+
+              {form.role === "trabajador" && (
+                <div>
+                  <label className="text-sm font-medium text-slate-700">Obra / Faena *</label>
+                  <input
+                    className={inputClassName}
+                    type="text"
+                    placeholder="Obra / Faena"
+                    value={form.obra}
+                    onChange={(e) => handleChange("obra", e.target.value)}
+                  />
+                </div>
+              )}
 
               <div>
                 <label className="text-sm font-medium text-slate-700">Empresa *</label>

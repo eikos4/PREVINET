@@ -341,6 +341,27 @@ export async function saveSignedDocumentPdf(params: {
   };
 
   await db.table("documentSignedPdfs").put(record);
+
+  try {
+    const { createNotification } = await import("../notifications/notifications.service");
+    let companyId: string | null = null;
+    try {
+      const obra = await db.table("obras").get((params.document as any).obra);
+      companyId = (obra as any)?.empresaId ?? null;
+    } catch {}
+    await createNotification({
+      type: "document_signed",
+      title: "Documento firmado",
+      body: `${params.assignment.firmadoPorNombre ?? "Un trabajador"} firmó el documento #${params.document.id}`,
+      toRole: "prevencionista",
+      companyId,
+      fromUserId: params.assignment.workerId,
+      related: { entity: "document", id: params.document.id }
+    });
+  } catch (e) {
+    console.error("No se pudo crear notificación (document_signed)", e);
+  }
+
   return record;
 }
 

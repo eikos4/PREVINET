@@ -353,6 +353,123 @@ body {
   cursor: pointer;
 }
 
+/* INSTALL BANNER */
+.install-banner { 
+  position: fixed; 
+  bottom: 10px; 
+  left: 10px; 
+  right: 10px; 
+  background: #fff; 
+  padding: 12px; 
+  border-radius: 8px; 
+  box-shadow: 0 4px 12px rgba(0,0,0,.15); 
+  z-index: 9999; 
+  display: flex; 
+  justify-content: space-between; 
+  align-items: center; 
+  gap: 12px; 
+}
+
+.install-banner .btn { 
+  background: transparent; 
+  border: none; 
+  padding: 8px 10px; 
+  cursor: pointer; 
+}
+
+.install-banner .btn-primary { 
+  background: #2563eb; 
+  color: white; 
+  border-radius: 6px; 
+}
+
+/* NOTIFICATIONS */
+.notifications-root { position: relative; }
+
+.notifications-bell-btn {
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  padding: 6px 8px;
+  border-radius: 8px;
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.notifications-bell-btn:focus {
+  outline: 2px solid rgba(37,99,235,0.16);
+  box-shadow: 0 0 0 4px rgba(37,99,235,0.06);
+}
+
+.notifications-bell-icon { font-size: 18px; }
+
+.notifications-badge {
+  position: absolute;
+  top: -6px;
+  right: -6px;
+  background: #ef4444;
+  color: white;
+  border-radius: 999px;
+  min-width: 18px;
+  height: 18px;
+  padding: 0 6px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 11px;
+  font-weight: 800;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.12);
+}
+
+.notifications-bell-btn.pulse {
+  animation: pulse 0.9s ease-in-out;
+}
+
+@keyframes pulse {
+  0% { transform: scale(1); }
+  30% { transform: scale(1.08); }
+  100% { transform: scale(1); }
+}
+
+.notifications-panel {
+  position: absolute;
+  left: 100%;
+  top: 8px;
+  margin-left: 12px;
+  width: 360px;
+  background: white;
+  box-shadow: 0 18px 40px rgba(2,6,23,0.24);
+  border-radius: 12px;
+  z-index: 9999;
+  overflow: hidden;
+}
+
+/* arrow */
+.notifications-panel::before {
+  content: '';
+  position: absolute;
+  left: -7px;
+  top: 20px;
+  width: 14px;
+  height: 14px;
+  background: white;
+  transform: rotate(45deg);
+  box-shadow: -3px -3px 6px rgba(0,0,0,0.04);
+}
+
+.notification-item { padding: 12px; border-bottom: 1px solid #f0f0f0; display: flex; gap: 12px; align-items: flex-start; }
+.notification-item.unread { background: #f8fafc; }
+.notification-item.read { background: transparent; }
+
+.notification-item .meta { font-size: 12px; color: #94a3b8; margin-top: 6px; }
+
+.btn { background: transparent; border: none; cursor: pointer; }
+
+.btn-primary { background: #2563eb; color: white; border-radius: 6px; }
+
+
 /* ---------- LOGIN ---------- */
 .login {
   min-height: 100vh;

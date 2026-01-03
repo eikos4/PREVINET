@@ -27,7 +27,7 @@ export type FitForWork = {
   id: string;
   fecha: string;
   turno: "mañana" | "tarde" | "noche";
-  obra?: string;
+  obra: string;
   estado: "PUBLICADO";
   questions: FitForWorkQuestion[];
   asignados: FitForWorkWorkerAssignment[];
@@ -51,12 +51,16 @@ export async function getFitForWork(): Promise<FitForWork[]> {
 export async function addFitForWork(
   data: Omit<FitForWork, "id" | "creadoEn" | "estado" | "questions">
 ) {
+  const obra = (data.obra || "").trim();
+  if (!obra) throw new Error("Obra/Faena es obligatoria");
+
   const fitForWork: FitForWork = {
     id: crypto.randomUUID(),
     creadoEn: new Date(),
     estado: "PUBLICADO",
     questions: DEFAULT_QUESTIONS.map((q) => ({ ...q })),
     ...data,
+    obra,
   };
 
   await db.table("fitForWork").add(fitForWork);

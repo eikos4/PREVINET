@@ -190,6 +190,27 @@ export async function saveSignedFitForWorkPdf(params: {
   };
 
   await db.table("fitForWorkSignedPdfs").put(record);
+
+  try {
+    const { createNotification } = await import("../notifications/notifications.service");
+    let companyId: string | null = null;
+    try {
+      const obra = await db.table("obras").get((params.fitForWork as any).obra);
+      companyId = (obra as any)?.empresaId ?? null;
+    } catch {}
+    await createNotification({
+      type: "fitforwork_signed",
+      title: "Fit-for-Work firmado",
+      body: `${params.assignment.firmadoPorNombre ?? "Un trabajador"} firmó Fit-for-Work #${params.fitForWork.id}`,
+      toRole: "prevencionista",
+      companyId,
+      fromUserId: params.assignment.workerId,
+      related: { entity: "fitForWork", id: params.fitForWork.id }
+    });
+  } catch (e) {
+    console.error("No se pudo crear notificación (fitforwork_signed)", e);
+  }
+
   return record;
 }
 

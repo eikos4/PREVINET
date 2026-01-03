@@ -6,7 +6,13 @@ export type UserRole =
   | "supervisor"
   | "administrador"
   | "auditor"
-  | "admin";
+  | "admin"
+  | "superadmin";
+
+export function normalizeRole(role: UserRole): UserRole {
+  // if (role === "admin" || role === "administrador") return "superadmin";
+  return role;
+}
 
 export type User = {
   id: string;
@@ -16,6 +22,7 @@ export type User = {
   workerId?: string;
   companyName?: string;
   companyRut?: string;
+  companyId?: string | null;
   creadoEn: Date;
 };
 
@@ -23,7 +30,8 @@ const CURRENT_USER_KEY = "currentUserId";
 
 export async function loginWithPin(
   pin: string,
-  role: UserRole
+  role: UserRole,
+  companyRut?: string
 ): Promise<User> {
   if (role === "trabajador") {
     const existing = await db
@@ -80,25 +88,59 @@ export async function loginWithPin(
 
   const users = await db.table<User>("users").toArray();
 
-  const existing = users.find(
-    (u) => u.pin === pin && u.role === role
-  );
+  const expectedRoles: UserRole[] =
+    role === "superadmin"
+      ? ["superadmin", "admin", "administrador"]
+      : [role];
+
+  // For superadmin, we don't strictly require company match, but for others we do if provided
+  // However, normally superadmins are global. 
+  // For other roles, if companyRut is provided, we must match it.
+
+  const existing = users.find((u) => {
+    const roleMatch = expectedRoles.includes(u.role);
+    const pinMatch = u.pin === pin;
+
+    if (!roleMatch || !pinMatch) return false;
+
+    // If I am claiming to be from a specific company, check it.
+    // Exception: Superadmins might not have companyRut set or might be global.
+    // If user has no companyRut, it's global or legacy? 
+    if (companyRut && role !== "superadmin") {
+      return (u.companyRut || "") === companyRut;
+    }
+
+    return true;
+  });
 
   if (existing) {
+    const normalized = normalizeRole(existing.role);
+    if (normalized !== existing.role) {
+      const updated: User = { ...existing, role: normalized };
+      await db.table("users").update(existing.id, { role: normalized });
+      setCurrentUser(updated);
+      return updated;
+    }
+
     setCurrentUser(existing);
     return existing;
   }
 
-  if (role === "supervisor" || role === "prevencionista" || role === "auditor") {
+  if (role === "supervisor" || role === "prevencionista" || role === "auditor" || role === "administrador") {
+    // These users MUST be pre-created by Admin. 
+    // "administrador" (Company Admin) is also created by Superadmin, so it CANNOT be auto-provisioned here.
     throw new Error("Usuario no registrado. Debe ser creado/enrolado primero.");
   }
 
+  // Fallback for auto-creation (Mainly for DEV Superadmin or legacy flows)
+  // If verifying against real security, this should be removed for prod.
   const user: User = {
     id: crypto.randomUUID(),
     name: roleLabel(role),
     pin,
     role,
     creadoEn: new Date(),
+    companyRut: companyRut, // Assign if provided during auto-creation (e.g. first superadmin login?)
   };
 
   await db.table("users").add(user);
@@ -110,7 +152,16 @@ export async function loginWithPin(
 export async function getCurrentUser(): Promise<User | null> {
   const id = localStorage.getItem(CURRENT_USER_KEY);
   if (!id) return null;
-  return (await db.table("users").get(id)) ?? null;
+  const user = (await db.table<User>("users").get(id)) ?? null;
+  if (!user) return null;
+
+  const normalized = normalizeRole(user.role);
+  if (normalized !== user.role) {
+    await db.table("users").update(user.id, { role: normalized });
+    return { ...user, role: normalized };
+  }
+
+  return user;
 }
 
 export function setCurrentUser(user: User) {
@@ -135,6 +186,8 @@ function roleLabel(role: UserRole): string {
       return "Auditor";
     case "admin":
       return "Admin Empresa";
+    case "superadmin":
+      return "Superadmin";
     default:
       return "Usuario";
   }

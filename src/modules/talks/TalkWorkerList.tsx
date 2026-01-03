@@ -3,12 +3,14 @@ import type { Worker } from "../workers/worker.service";
 import { getTalksForWorker, signTalk } from "./talk.service";
 import type { Talk } from "./talk.service";
 import SignatureModal from "../irl/SignatureModal";
+import { downloadBlobAsFile, getSignedTalkPdfByKey } from "./talkPdf.service";
 
 export default function TalkWorkerList({ worker }: { worker: Worker }) {
   const [talks, setTalks] = useState<Talk[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [signingId, setSigningId] = useState<string | null>(null);
+  const [downloadingKey, setDownloadingKey] = useState<string | null>(null);
   const [pendingSignTalk, setPendingSignTalk] = useState<Talk | null>(null);
 
   const load = () => {
@@ -112,6 +114,7 @@ export default function TalkWorkerList({ worker }: { worker: Worker }) {
           {sorted.map((t) => {
             const assignment = t.asignados.find((a) => a.workerId === worker.id);
             const firmado = !!assignment?.firmadoEn;
+            const pdfKey = assignment ? `${t.id}_${assignment.workerId}_${assignment.token}` : null;
 
             return (
               <div key={t.id} className="art-item">
@@ -127,7 +130,38 @@ export default function TalkWorkerList({ worker }: { worker: Worker }) {
                 </div>
 
                 {firmado ? (
-                  <span className="art-status">Firmado</span>
+                  <div className="flex" style={{ gap: 8, alignItems: "center" }}>
+                    <span className="art-status">Firmado</span>
+                    {assignment && (
+                      <button
+                        type="button"
+                        className="btn-secondary"
+                        disabled={downloadingKey === pdfKey}
+                        onClick={async () => {
+                          if (!assignment) return;
+                          setError("");
+                          setDownloadingKey(pdfKey);
+                          try {
+                            const rec = await getSignedTalkPdfByKey({
+                              talkId: t.id,
+                              workerId: assignment.workerId,
+                              token: assignment.token,
+                            });
+                            if (!rec) throw new Error("No se encontró el PDF firmado");
+                            downloadBlobAsFile(rec.pdf, rec.fileName);
+                          } catch (e) {
+                            const msg = e instanceof Error ? e.message : "No se pudo descargar";
+                            setError(msg);
+                          } finally {
+                            setDownloadingKey(null);
+                          }
+                        }}
+                        style={{ padding: "0.35rem 0.6rem", fontSize: "0.85rem" }}
+                      >
+                        {downloadingKey === pdfKey ? "Descargando..." : "Descargar PDF"}
+                      </button>
+                    )}
+                  </div>
                 ) : (
                   <button
                     type="button"

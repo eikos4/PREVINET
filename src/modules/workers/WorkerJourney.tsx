@@ -1,7 +1,96 @@
 import { useMemo } from "react";
 
-import type { Worker } from "./worker.service";
-import type { WorkerJourneyStatus, WorkerJourneyStepKey } from "./workerJourney.service";
+// =========================================================
+// 🛑 DEFINICIONES DE TIPOS (Interfáces)
+// (Dejamos las interfaces aquí para mantener la estabilidad)
+// =========================================================
+
+export type WorkerJourneyStepKey = "fitForWork" | "art" | "irl" | "talks";
+
+interface StepStatus {
+  total: number;
+  pending: number;
+}
+
+export interface WorkerJourneyStatus {
+  currentStep: WorkerJourneyStepKey | "done";
+  steps: Record<WorkerJourneyStepKey, StepStatus>;
+}
+
+export interface Worker {
+  nombre: string;
+  cargo: string;
+  obra: string;
+  id: string;
+}
+
+// =========================================================
+// ✅ COMPONENTE PRINCIPAL
+// =========================================================
+
+// --- TIPOS DE ICONOS (Sin cambios) ---
+const StepIcons = {
+  fitForWork: () => (
+    <svg className="w-5 h-5 text-green-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+      <path
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        strokeWidth={2}
+        d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a12.004 12.004 0 00-7.332 2.946m16.664 0A12.004 12.004 0 0112 21.056c-3.176 0-6.103-1.05-8.332-2.88"
+      />
+    </svg>
+  ),
+  art: () => (
+    <svg className="w-5 h-5 text-blue-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+      <path
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        strokeWidth={2}
+        d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"
+      />
+    </svg>
+  ),
+  irl: () => (
+    <svg className="w-5 h-5 text-indigo-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+      <path
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        strokeWidth={2}
+        d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01"
+      />
+    </svg>
+  ),
+  talks: () => (
+    <svg className="w-5 h-5 text-purple-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+      <path
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        strokeWidth={2}
+        d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"
+      />
+    </svg>
+  ),
+  Refresh: () => (
+    <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+      <path
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        strokeWidth={2}
+        d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 4m0 4v5h.582m15.356-2a8.001 8.001 0 01-14.708 7.334"
+      />
+    </svg>
+  ),
+  Profile: () => (
+    <svg className="w-4 h-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+      <path
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        strokeWidth={2}
+        d="M12 14l9-5-9-5-9 5 9 5zm0 0v6"
+      />
+    </svg>
+  ),
+};
 
 type Props = {
   worker: Worker;
@@ -9,61 +98,53 @@ type Props = {
   loading: boolean;
   error: string;
   onRefresh: () => void;
-  onGoTo: (section: "fitForWork" | "art" | "irl" | "documents" | "talks" | "profile") => void;
+  onGoTo: (section: "fitForWork" | "art" | "irl" | "talks" | "profile") => void;
 };
 
 export default function WorkerJourney({ worker, status, loading, error, onRefresh, onGoTo }: Props) {
+  // --- LÓGICA DE DATOS (SIN CAMBIOS) ---
   const steps = useMemo(() => {
     const list: Array<{
       key: WorkerJourneyStepKey;
       title: string;
       subtitle: string;
-      icon: string;
+      icon: keyof typeof StepIcons;
       actionLabel: string;
-      actionSection: "fitForWork" | "art" | "irl" | "documents" | "talks";
+      actionSection: "fitForWork" | "art" | "irl" | "talks";
     }> = [
       {
         key: "fitForWork",
-        title: "Fit-for-Work",
-        subtitle: "Evaluación diaria (hoy)",
-        icon: "✅",
-        actionLabel: "Completar evaluación",
+        title: "Evaluación Fit-for-Work",
+        subtitle: "Evaluación diaria (Estado de salud de hoy)",
+        icon: "fitForWork",
+        actionLabel: "Completar Evaluación",
         actionSection: "fitForWork",
       },
       {
         key: "art",
-        title: "ART / AST",
-        subtitle: "Documentos de la jornada (hoy)",
-        icon: "📝",
+        title: "Análisis de Riesgo (ART/AST)",
+        subtitle: "Documentos de la jornada a firmar",
+        icon: "art",
         actionLabel: "Firmar ART",
         actionSection: "art",
       },
       {
         key: "irl",
-        title: "IRL",
-        subtitle: "Lectura + preguntas + firma",
-        icon: "🧾",
-        actionLabel: "Firmar IRL",
+        title: "Instrucción de Riesgo Específico (IRL)",
+        subtitle: "Lectura, preguntas y firma de documentos",
+        icon: "irl",
+        actionLabel: "Revisar IRL",
         actionSection: "irl",
       },
       {
-        key: "documents",
-        title: "Documentos",
-        subtitle: "Políticas / procedimientos asignados",
-        icon: "📎",
-        actionLabel: "Firmar documentos",
-        actionSection: "documents",
-      },
-      {
         key: "talks",
-        title: "Charlas",
-        subtitle: "Charlas diarias asignadas",
-        icon: "🗣️",
-        actionLabel: "Firmar charlas",
+        title: "Charlas de Seguridad",
+        subtitle: "Charlas diarias o asignadas",
+        icon: "talks",
+        actionLabel: "Firmar Charlas",
         actionSection: "talks",
       },
     ];
-
     return list;
   }, []);
 
@@ -73,179 +154,158 @@ export default function WorkerJourney({ worker, status, loading, error, onRefres
   }, [status, steps]);
 
   const activeKey = status?.currentStep === "done" ? null : (status?.currentStep ?? null);
+  // --- FIN LÓGICA DE DATOS ---
 
   return (
-    <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
-      <div className="bg-gradient-to-r from-slate-900 to-slate-800 px-6 py-5">
-        <div className="flex" style={{ justifyContent: "space-between", gap: 16, alignItems: "center" }}>
-          <div>
-            <h3 className="text-xl font-semibold text-white m-0">Inicio de jornada</h3>
-            <p className="text-sm text-slate-200" style={{ margin: "0.35rem 0 0 0" }}>
-              {worker.nombre} · {worker.cargo} · {worker.obra}
-            </p>
+    <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-4 sm:py-8 space-y-6">
+      <div className="bg-white rounded-2xl shadow-2xl border border-gray-100 overflow-hidden">
+        <div className="bg-slate-800 px-4 py-4 sm:px-6 sm:py-5">
+          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
+            <div className="min-w-0">
+              <h3 className="text-xl sm:text-2xl font-extrabold text-white m-0 truncate">Inicia tu Jornada Hoy</h3>
+              <p className="text-xs sm:text-sm text-blue-200 mt-1 m-0 truncate">
+                {worker.nombre} · {worker.cargo} · {worker.obra}
+              </p>
+            </div>
+
+            <button
+              type="button"
+              className="flex items-center gap-1.5 px-3 py-1.5 sm:px-3.5 sm:py-2 text-sm font-medium rounded-lg text-white bg-blue-600 hover:bg-blue-700 transition-colors disabled:opacity-70 shadow-md flex-shrink-0"
+              onClick={onRefresh}
+              disabled={loading}
+            >
+              <StepIcons.Refresh />
+              {loading ? "Actualizando..." : "Actualizar"}
+            </button>
           </div>
-
-          <button
-            type="button"
-            className="btn-secondary"
-            onClick={onRefresh}
-            disabled={loading}
-            style={{ padding: "0.5rem 0.8rem", fontSize: "0.9rem" }}
-          >
-            {loading ? "Actualizando..." : "Actualizar"}
-          </button>
         </div>
-      </div>
 
-      <div className="p-6">
-        {error && (
-          <p className="form-error" style={{ marginTop: 0 }}>
-            {error}
-          </p>
-        )}
-
-        <div
-          className="rounded-xl border border-gray-200 bg-gray-50 p-4"
-          style={{ marginBottom: "1rem" }}
-        >
-          <div className="flex" style={{ justifyContent: "space-between", alignItems: "center", gap: 12 }}>
-            <div>
-              <div className="text-sm font-semibold text-gray-900">Progreso</div>
-              <div className="text-sm text-gray-600">
-                {status?.currentStep === "done"
-                  ? "Jornada completada"
-                  : "Completa los pasos en orden para habilitar el siguiente"}
+        <div className="p-4 sm:p-6 space-y-6">
+          <div className="rounded-xl border border-blue-200 bg-blue-50 p-4">
+            <div className="flex justify-between items-center gap-3">
+              <div>
+                <div className="text-base font-bold text-blue-800">Progreso Diario</div>
+                <div className="text-sm text-blue-700 mt-0.5">
+                  {status?.currentStep === "done"
+                    ? "Jornada completada con éxito. ¡A trabajar!"
+                    : "Completa los pasos en orden para habilitar el siguiente."}
+                </div>
+              </div>
+              <div className="text-lg font-extrabold text-blue-900 flex-shrink-0">
+                {doneCount}/{steps.length}
               </div>
             </div>
-            <div className="text-sm font-semibold text-gray-900">
-              {doneCount}/{steps.length}
+
+            <div className="mt-3 h-2.5 bg-blue-200 rounded-full overflow-hidden">
+              <div
+                className="h-full rounded-full transition-all duration-500 ease-out"
+                style={{
+                  width: `${Math.round((doneCount / steps.length) * 100)}%`,
+                  background: "linear-gradient(90deg, #3b82f6, #0ea5e9)",
+                }}
+              />
             </div>
           </div>
 
-          <div
-            className="mt-3"
-            style={{ height: 10, background: "#e5e7eb", borderRadius: 999, overflow: "hidden" }}
-          >
-            <div
-              style={{
-                height: "100%",
-                width: `${Math.round((doneCount / steps.length) * 100)}%`,
-                background: "linear-gradient(90deg, #2563eb, #06b6d4)",
-              }}
-            />
-          </div>
-        </div>
+          {error && (
+            <div className="p-4 rounded-xl bg-red-50 border border-red-300">
+              <p className="text-sm text-red-700 font-medium">⚠️ Error al cargar el estado: {error}</p>
+            </div>
+          )}
 
-        <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-          {steps.map((s, idx) => {
-            const counts = status?.steps[s.key] ?? { pending: 0, total: 0 };
-            const completed = counts.pending === 0;
-            const active = activeKey === s.key;
-            const locked = !completed && activeKey !== null && !active;
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
+            {steps.map((s, idx) => {
+              const counts = status?.steps[s.key] ?? { pending: 0, total: 0 };
+              const completed = counts.pending === 0;
+              const active = activeKey === s.key;
+              const locked = !completed && activeKey !== null && !active;
+              const IconComponent = StepIcons[s.icon];
 
-            return (
-              <div
-                key={s.key}
-                className="rounded-xl border border-gray-200 bg-white"
-                style={{
-                  padding: "0.9rem",
-                  boxShadow: active ? "0 0 0 3px rgba(37, 99, 235, 0.12)" : undefined,
-                  borderColor: active ? "rgba(37, 99, 235, 0.45)" : undefined,
-                  opacity: locked ? 0.55 : 1,
-                }}
-              >
-                <div className="flex" style={{ justifyContent: "space-between", gap: 12, alignItems: "center" }}>
-                  <div className="flex" style={{ gap: 12, alignItems: "flex-start" }}>
-                    <div
-                      className="rounded-lg"
-                      style={{
-                        width: 40,
-                        height: 40,
-                        display: "flex",
-                        alignItems: "center",
-                        justifyContent: "center",
-                        background: active ? "#eff6ff" : "#f8fafc",
-                        border: "1px solid #e5e7eb",
-                        fontSize: "1.1rem",
-                      }}
-                    >
-                      {s.icon}
-                    </div>
+              const cardClasses = [
+                "rounded-xl",
+                "border",
+                "p-4",
+                "transition-all",
+                "duration-300",
+                active ? "border-blue-500 bg-blue-50 shadow-lg transform scale-[1.01]" : "border-gray-200 bg-white hover:shadow-sm",
+                locked ? "opacity-50 pointer-events-none" : "",
+              ]
+                .filter(Boolean)
+                .join(" ");
 
-                    <div>
-                      <div className="text-sm font-semibold text-gray-900">
-                        {idx + 1}. {s.title}
-                        {active && (
-                          <span
-                            className="ml-2 text-xs font-semibold"
-                            style={{
-                              color: "#1d4ed8",
-                              background: "#eff6ff",
-                              border: "1px solid rgba(37, 99, 235, 0.25)",
-                              borderRadius: 999,
-                              padding: "0.15rem 0.5rem",
-                              marginLeft: 8,
-                            }}
-                          >
-                            Paso actual
-                          </span>
-                        )}
-                        {completed && (
-                          <span
-                            className="ml-2 text-xs font-semibold"
-                            style={{
-                              color: "#16a34a",
-                              background: "#f0fdf4",
-                              border: "1px solid rgba(22, 163, 74, 0.25)",
-                              borderRadius: 999,
-                              padding: "0.15rem 0.5rem",
-                              marginLeft: 8,
-                            }}
-                          >
-                            Completado
-                          </span>
-                        )}
+              const statusTagClasses = completed
+                ? "bg-green-100 text-green-700 border-green-300"
+                : "bg-red-100 text-red-700 border-red-300";
+
+              return (
+                <div key={s.key} className={cardClasses}>
+                  <div className="flex flex-col sm:flex-row justify-between gap-4 items-start sm:items-center">
+                    <div className="flex gap-4 items-start flex-1 min-w-0">
+                      <div
+                        className={`w-10 h-10 flex items-center justify-center rounded-lg border flex-shrink-0 ${
+                          active ? "bg-blue-100 border-blue-400" : "bg-gray-100 border-gray-200"
+                        }`}
+                      >
+                        <IconComponent />
                       </div>
-                      <div className="text-sm text-gray-600">{s.subtitle}</div>
-                      <div className="text-sm" style={{ color: completed ? "#16a34a" : "#b91c1c", marginTop: 4 }}>
-                        {counts.total === 0
-                          ? "Sin asignaciones"
-                          : completed
-                            ? "Sin pendientes"
-                            : `${counts.pending} pendiente(s) de ${counts.total}`}
+
+                      <div className="pt-0.5 min-w-0">
+                        <div className="text-base font-bold text-gray-900 flex items-center truncate">
+                          {idx + 1}. {s.title}
+                          {active && (
+                            <span className="ml-3 px-2 py-0.5 text-xs font-semibold bg-blue-600 text-white rounded-full hidden sm:inline-block">
+                              ACTUAL
+                            </span>
+                          )}
+                          {completed && !active && (
+                            <span className="ml-3 px-2 py-0.5 text-xs font-semibold bg-green-500 text-white rounded-full hidden sm:inline-block">
+                              ✓ LISTO
+                            </span>
+                          )}
+                        </div>
+
+                        <div className="text-sm text-gray-600 mt-0.5 truncate">{s.subtitle}</div>
+
+                        <div className={`mt-2 px-3 py-1 text-xs font-medium rounded-full border w-fit ${statusTagClasses}`}>
+                          {counts.total === 0
+                            ? "Sin asignaciones"
+                            : completed
+                              ? "Sin pendientes (Completado)"
+                              : `${counts.pending} pendiente(s) de ${counts.total}`}
+                        </div>
                       </div>
                     </div>
-                  </div>
 
-                  <div className="flex" style={{ gap: 8, alignItems: "center" }}>
                     <button
                       type="button"
-                      className="btn-secondary"
+                      className={`mt-3 sm:mt-0 w-full sm:w-auto flex-shrink-0 px-4 py-2 text-sm font-medium rounded-lg transition-colors ${
+                        active && !completed
+                          ? "bg-blue-600 text-white hover:bg-blue-700 shadow-md"
+                          : "bg-blue-100 text-blue-700 hover:bg-blue-200"
+                      } disabled:opacity-50 disabled:shadow-none`}
                       onClick={() => onGoTo(s.actionSection)}
                       disabled={locked}
-                      style={{ padding: "0.4rem 0.7rem", fontSize: "0.85rem" }}
                     >
                       {s.actionLabel}
                     </button>
                   </div>
                 </div>
-              </div>
-            );
-          })}
-        </div>
-
-        <div className="mt-6 rounded-xl border border-gray-200 bg-gray-50 p-4">
-          <div className="text-sm font-semibold text-gray-900">Accesos rápidos</div>
-          <div className="text-sm text-gray-600" style={{ marginTop: 4 }}>
-            Puedes ver tu información personal y estado general en tu perfil.
+              );
+            })}
           </div>
-          <div className="flex" style={{ gap: 8, marginTop: 12, flexWrap: "wrap" }}>
+
+          <div className="mt-6 rounded-xl border border-gray-200 bg-gray-50 p-4 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
+            <div>
+              <div className="text-sm font-bold text-gray-800">Mi Perfil</div>
+              <div className="text-sm text-gray-600 mt-0.5">Revisa tu estado, documentos firmados y datos laborales.</div>
+            </div>
+
             <button
               type="button"
-              className="btn-secondary"
+              className="mt-2 sm:mt-0 w-full sm:w-auto flex items-center justify-center sm:justify-start px-4 py-2 text-sm font-medium rounded-lg text-blue-700 bg-white border border-blue-300 hover:bg-blue-50 transition-colors shadow-sm"
               onClick={() => onGoTo("profile")}
-              style={{ padding: "0.45rem 0.75rem", fontSize: "0.85rem" }}
             >
+              <StepIcons.Profile />
               Ir a Mi perfil
             </button>
           </div>

@@ -18,6 +18,7 @@ export type TalkWorkerAssignment = {
 export type Talk = {
   id: string;
   tema: string;
+  obra: string;
   fechaHora: string;
   estado: "PUBLICADO";
   asignados: TalkWorkerAssignment[];
@@ -27,15 +28,22 @@ export type Talk = {
 
 export async function getTalks(): Promise<Talk[]> {
   const list = await db.table("talks").toArray();
-  return list as Talk[];
+  return (list as Array<Talk | any>).map((t) => ({
+    ...t,
+    obra: String(t?.obra || "").trim(),
+  })) as Talk[];
 }
 
 export async function addTalk(data: Omit<Talk, "id" | "creadoEn" | "estado">) {
+  const obra = (data.obra || "").trim();
+  if (!obra) throw new Error("Obra/Faena es obligatoria");
+
   const talk: Talk = {
     id: crypto.randomUUID(),
     creadoEn: new Date(),
     estado: "PUBLICADO",
     ...data,
+    obra,
   };
 
   await db.table("talks").add(talk);

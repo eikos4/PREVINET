@@ -3,7 +3,7 @@ import type { Worker } from "../workers/worker.service";
 import type { ART } from "./art.service";
 import { getARTsForWorker, signART } from "./art.service";
 import SignatureModal from "../irl/SignatureModal";
-import { downloadBlobAsFile } from "./artPdf.service";
+import { downloadBlobAsFile, getSignedArtPdfByKey } from "./artPdf.service";
 import ARTReadConfirmModal from "./ARTReadConfirmModal";
 
 export default function ArtWorkerList({ worker }: { worker: Worker }) {
@@ -11,6 +11,7 @@ export default function ArtWorkerList({ worker }: { worker: Worker }) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [signingId, setSigningId] = useState<string | null>(null);
+  const [downloadingKey, setDownloadingKey] = useState<string | null>(null);
   const [pendingReadArt, setPendingReadArt] = useState<ART | null>(null);
   const [verificationParams, setVerificationParams] = useState<
     { answers: { q1: number; q2: number }; verificationAt: Date } | null
@@ -129,6 +130,7 @@ export default function ArtWorkerList({ worker }: { worker: Worker }) {
           {sorted.map((a) => {
             const assignment = a.asignados?.find((x) => x.workerId === worker.id);
             const firmado = !!assignment?.firmadoEn;
+            const pdfKey = assignment ? `${a.id}_${assignment.workerId}_${assignment.token}` : null;
 
             return (
               <div key={a.id} className="art-item">
@@ -152,7 +154,38 @@ export default function ArtWorkerList({ worker }: { worker: Worker }) {
                 </div>
 
                 {firmado ? (
-                  <span className="art-status">Firmado</span>
+                  <div className="flex" style={{ gap: 8, alignItems: "center" }}>
+                    <span className="art-status">Firmado</span>
+                    {assignment && (
+                      <button
+                        type="button"
+                        className="btn-secondary"
+                        disabled={downloadingKey === pdfKey}
+                        onClick={async () => {
+                          if (!assignment) return;
+                          setError("");
+                          setDownloadingKey(pdfKey);
+                          try {
+                            const rec = await getSignedArtPdfByKey({
+                              artId: a.id,
+                              workerId: assignment.workerId,
+                              token: assignment.token,
+                            });
+                            if (!rec) throw new Error("No se encontró el PDF firmado");
+                            downloadBlobAsFile(rec.pdf, rec.fileName);
+                          } catch (e) {
+                            const msg = e instanceof Error ? e.message : "No se pudo descargar";
+                            setError(msg);
+                          } finally {
+                            setDownloadingKey(null);
+                          }
+                        }}
+                        style={{ padding: "0.35rem 0.6rem", fontSize: "0.85rem" }}
+                      >
+                        {downloadingKey === pdfKey ? "Descargando..." : "Descargar PDF"}
+                      </button>
+                    )}
+                  </div>
                 ) : (
                   <div className="flex" style={{ gap: 8, alignItems: "center" }}>
                     {a.attachment?.blob && a.attachment.fileName && (

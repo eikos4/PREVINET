@@ -1,6 +1,12 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import SignatureModal from "../irl/SignatureModal";
 import { addWorker, revertWorkerEnrollment, signWorkerEnrollment } from "./worker.service";
+import { EditorContent, useEditor } from "@tiptap/react";
+import StarterKit from "@tiptap/starter-kit";
+import ExcelEditor from "../../shared/components/ExcelEditor";
+import { listTemplates, type TemplateRecord } from "../templates/templates.service";
+import { buildIrlTemplatePdfFileName, generateIrlPdfFromTemplate } from "../templates/irlTemplatePdf.service";
+import { listEmpresas, type Empresa } from "../empresas/empresas.service";
 
 export default function WorkerForm({ onCreated }: { onCreated: () => void }) {
   const [nombre, setNombre] = useState("");
@@ -9,12 +15,17 @@ export default function WorkerForm({ onCreated }: { onCreated: () => void }) {
   const [obra, setObra] = useState("");
   const [empresaNombre, setEmpresaNombre] = useState("");
   const [empresaRut, setEmpresaRut] = useState("");
+  const [empresaId, setEmpresaId] = useState<string>("");
+  const [empresas, setEmpresas] = useState<Empresa[]>([]);
   const [telefono, setTelefono] = useState("");
   const [expAltura, setExpAltura] = useState(false);
   const [expRuidos, setExpRuidos] = useState(false);
   const [expOtros, setExpOtros] = useState(false);
   const [expOtrosDetalle, setExpOtrosDetalle] = useState("");
+  const [irlMode, setIrlMode] = useState<"upload" | "template">("upload");
   const [irlAdjunto, setIrlAdjunto] = useState<File | null>(null);
+  const [irlTemplates, setIrlTemplates] = useState<TemplateRecord[]>([]);
+  const [irlTemplateId, setIrlTemplateId] = useState<string>("");
   const [aptitudAdjunto, setAptitudAdjunto] = useState<File | null>(null);
   const [pin, setPin] = useState("");
   const [confirmPin, setConfirmPin] = useState("");
@@ -41,6 +52,55 @@ export default function WorkerForm({ onCreated }: { onCreated: () => void }) {
     []
   );
 
+  const irlTemplate = useMemo(
+    () => irlTemplates.find((t) => t.id === irlTemplateId) || null,
+    [irlTemplates, irlTemplateId]
+  );
+
+  useEffect(() => {
+    listEmpresas()
+      .then((all) => {
+        const sorted = all
+          .slice()
+          .sort((a, b) => (a.nombreRazonSocial || "").localeCompare(b.nombreRazonSocial || "", "es"));
+        setEmpresas(sorted);
+      })
+      .catch(() => setEmpresas([]));
+  }, []);
+
+  useEffect(() => {
+    if (!empresaId) return;
+    const e = empresas.find((x) => x.id === empresaId);
+    if (!e) return;
+    setEmpresaNombre(e.nombreRazonSocial);
+    setEmpresaRut(e.rut);
+  }, [empresaId, empresas]);
+
+  const previewEditor = useEditor({
+    immediatelyRender: false,
+    extensions: [StarterKit],
+    content: irlTemplate?.contenido || "",
+    editable: false,
+    editorProps: {
+      attributes: {
+        class: "prose prose-sm max-w-none p-3 min-h-[120px] border rounded-md bg-slate-50",
+      },
+    },
+  });
+
+  useMemo(() => {
+    listTemplates()
+      .then((all) =>
+        setIrlTemplates(all.filter((t) => t.naturaleza === "Entidad del sistema" && t.subtipo === "IRL"))
+      )
+      .catch(() => setIrlTemplates([]));
+  }, []);
+
+  useMemo(() => {
+    if (!previewEditor) return;
+    previewEditor.commands.setContent(irlTemplate?.contenido || "");
+  }, [previewEditor, irlTemplateId]);
+
   const handleSubmit = async () => {
     setError("");
 
@@ -49,9 +109,16 @@ export default function WorkerForm({ onCreated }: { onCreated: () => void }) {
       return;
     }
 
-    if (!irlAdjunto) {
-      setError("Debes adjuntar el IRL (PDF, Word o Excel)");
-      return;
+    if (irlMode === "upload") {
+      if (!irlAdjunto) {
+        setError("Debes adjuntar el IRL (PDF, Word o Excel)");
+        return;
+      }
+    } else {
+      if (!irlTemplateId) {
+        setError("Debes seleccionar una plantilla IRL");
+        return;
+      }
     }
 
     if (!aptitudAdjunto) {
@@ -69,20 +136,22 @@ export default function WorkerForm({ onCreated }: { onCreated: () => void }) {
       return;
     }
 
-    const isIrlAllowed =
-      irlAdjunto.type === "application/pdf" ||
-      irlAdjunto.type === "application/msword" ||
-      irlAdjunto.type === "application/vnd.openxmlformats-officedocument.wordprocessingml.document" ||
-      irlAdjunto.type === "application/vnd.ms-excel" ||
-      irlAdjunto.type === "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet";
+    if (irlMode === "upload" && irlAdjunto) {
+      const isIrlAllowed =
+        irlAdjunto.type === "application/pdf" ||
+        irlAdjunto.type === "application/msword" ||
+        irlAdjunto.type === "application/vnd.openxmlformats-officedocument.wordprocessingml.document" ||
+        irlAdjunto.type === "application/vnd.ms-excel" ||
+        irlAdjunto.type === "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet";
 
-    if (!isIrlAllowed) {
-      setError("Formato IRL no soportado. Solo PDF/Word/Excel");
-      return;
+      if (!isIrlAllowed) {
+        setError("Formato IRL no soportado. Solo PDF/Word/Excel");
+        return;
+      }
     }
 
     try {
-      const created = await addWorker({
+      const baseWorkerData = {
         nombre,
         rut,
         cargo,
@@ -96,11 +165,6 @@ export default function WorkerForm({ onCreated }: { onCreated: () => void }) {
           otros: expOtros,
           otrosDetalle: expOtros ? expOtrosDetalle : undefined,
         },
-        irlAdjunto: {
-          fileName: irlAdjunto.name,
-          mimeType: irlAdjunto.type || "application/octet-stream",
-          blob: irlAdjunto,
-        },
         aptitudAdjunto: {
           fileName: aptitudAdjunto.name,
           mimeType: aptitudAdjunto.type || "application/octet-stream",
@@ -108,6 +172,39 @@ export default function WorkerForm({ onCreated }: { onCreated: () => void }) {
         },
         pin,
         habilitado: false,
+      };
+
+      const workerForIrl: any = {
+        ...baseWorkerData,
+        creadoEn: new Date(),
+        id: "__preview__",
+      };
+
+      let irlAttachment: { fileName: string; mimeType: string; blob: Blob };
+      if (irlMode === "upload" && irlAdjunto) {
+        irlAttachment = {
+          fileName: irlAdjunto.name,
+          mimeType: irlAdjunto.type || "application/octet-stream",
+          blob: irlAdjunto,
+        };
+      } else {
+        if (!irlTemplate) throw new Error("Plantilla IRL no encontrada");
+        const pdf = await generateIrlPdfFromTemplate({ template: irlTemplate, worker: workerForIrl });
+        const fileName = buildIrlTemplatePdfFileName({
+          workerName: nombre,
+          workerRut: rut,
+          templateName: irlTemplate.nombre,
+        });
+        irlAttachment = {
+          fileName,
+          mimeType: "application/pdf",
+          blob: pdf,
+        };
+      }
+
+      const created = await addWorker({
+        ...baseWorkerData,
+        irlAdjunto: irlAttachment,
       });
 
       setSigningWorkerId(created.id);
@@ -130,6 +227,7 @@ export default function WorkerForm({ onCreated }: { onCreated: () => void }) {
       setRut("");
       setCargo("");
       setObra("");
+      setEmpresaId("");
       setEmpresaNombre("");
       setEmpresaRut("");
       setTelefono("");
@@ -138,6 +236,7 @@ export default function WorkerForm({ onCreated }: { onCreated: () => void }) {
       setExpOtros(false);
       setExpOtrosDetalle("");
       setIrlAdjunto(null);
+      setIrlTemplateId("");
       setAptitudAdjunto(null);
       setPin("");
       setConfirmPin("");
@@ -267,13 +366,19 @@ export default function WorkerForm({ onCreated }: { onCreated: () => void }) {
                 <label htmlFor="worker-empresa" className={labelClass}>
                   Empresa (Razón social)
                 </label>
-                <input
+                <select
                   id="worker-empresa"
-                  placeholder="Empresa (Razón social)"
-                  value={empresaNombre}
-                  onChange={(e) => setEmpresaNombre(e.target.value)}
+                  value={empresaId}
+                  onChange={(e) => setEmpresaId(e.target.value)}
                   className={inputClass}
-                />
+                >
+                  <option value="">Selecciona empresa…</option>
+                  {empresas.map((e) => (
+                    <option key={e.id} value={e.id}>
+                      {e.nombreRazonSocial}
+                    </option>
+                  ))}
+                </select>
               </div>
 
               <div>
@@ -284,8 +389,9 @@ export default function WorkerForm({ onCreated }: { onCreated: () => void }) {
                   id="worker-empresa-rut"
                   placeholder="RUT Empresa"
                   value={empresaRut}
-                  onChange={(e) => setEmpresaRut(e.target.value)}
                   className={inputClass}
+                  readOnly
+                  disabled
                 />
               </div>
             </div>
@@ -400,22 +506,85 @@ export default function WorkerForm({ onCreated }: { onCreated: () => void }) {
           <section>
             <div>
               <h4 className={sectionTitleClass}>Documentos</h4>
-              <p className={sectionHintClass}>Adjunta IRL y documento de aptitud para continuar a firma.</p>
+              <p className={sectionHintClass}>
+                Adjunta IRL (archivo) o selecciona una plantilla IRL, y adjunta documento de aptitud para continuar a firma.
+              </p>
             </div>
 
             <div className="mt-4 grid grid-cols-1 gap-4 md:grid-cols-2">
               <div>
-                <label className={labelClass}>IRL (PDF/Word/Excel)</label>
-                <input
-                  type="file"
-                  accept="application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document,application/vnd.ms-excel,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,.pdf,.doc,.docx,.xls,.xlsx"
-                  onChange={(e) => setIrlAdjunto(e.target.files?.[0] ?? null)}
-                  className={fileInputClass}
-                />
-                {irlAdjunto && (
-                  <p className="mt-2 text-xs text-gray-600">
-                    Archivo: <span className="font-semibold text-gray-900">{irlAdjunto.name}</span>
-                  </p>
+                <label className={labelClass}>IRL</label>
+
+                <div className="mt-2 flex items-center gap-2">
+                  <button
+                    type="button"
+                    className={irlMode === "upload" ? "btn-primary" : "btn-secondary"}
+                    onClick={() => setIrlMode("upload")}
+                    disabled={!!signingWorkerId || signingBusy}
+                  >
+                    Subir archivo
+                  </button>
+                  <button
+                    type="button"
+                    className={irlMode === "template" ? "btn-primary" : "btn-secondary"}
+                    onClick={() => setIrlMode("template")}
+                    disabled={!!signingWorkerId || signingBusy}
+                  >
+                    Usar plantilla
+                  </button>
+                </div>
+
+                {irlMode === "upload" ? (
+                  <div className="mt-3">
+                    <input
+                      type="file"
+                      accept="application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document,application/vnd.ms-excel,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,.pdf,.doc,.docx,.xls,.xlsx"
+                      onChange={(e) => setIrlAdjunto(e.target.files?.[0] ?? null)}
+                      className={fileInputClass}
+                      disabled={!!signingWorkerId || signingBusy}
+                    />
+                    {irlAdjunto && (
+                      <p className="mt-2 text-xs text-gray-600">
+                        Archivo: <span className="font-semibold text-gray-900">{irlAdjunto.name}</span>
+                      </p>
+                    )}
+                  </div>
+                ) : (
+                  <div className="mt-3 space-y-2">
+                    <select
+                      value={irlTemplateId}
+                      onChange={(e) => setIrlTemplateId(e.target.value)}
+                      className={inputClass}
+                      disabled={!!signingWorkerId || signingBusy}
+                    >
+                      <option value="">Selecciona plantilla IRL…</option>
+                      {irlTemplates.map((t) => (
+                        <option key={t.id} value={t.id}>
+                          {t.nombre} ({t.formato})
+                        </option>
+                      ))}
+                    </select>
+
+                    {irlTemplate && (
+                      <div className="mt-2">
+                        <div className="text-xs font-semibold text-gray-600 uppercase tracking-wider">
+                          Vista previa
+                        </div>
+                        <div className="mt-2">
+                          {irlTemplate.formato === "excel" && irlTemplate.excelData ? (
+                            <ExcelEditor data={irlTemplate.excelData} readOnly={true} height={280} />
+                          ) : irlTemplate.formato === "word" && irlTemplate.wordData ? (
+                            <div
+                              className="border rounded-md p-4 bg-white max-h-[280px] overflow-y-auto"
+                              dangerouslySetInnerHTML={{ __html: irlTemplate.wordData.html }}
+                            />
+                          ) : (
+                            <EditorContent editor={previewEditor} />
+                          )}
+                        </div>
+                      </div>
+                    )}
+                  </div>
                 )}
               </div>
 

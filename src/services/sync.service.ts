@@ -9,7 +9,10 @@ export type SyncItem = {
     | "talk"
     | "fitForWork"
     | "findingIncident"
-    | "document";
+    | "document"
+    | "empresa"
+    | "obra"
+    | "template";
   createdAt: Date;
 };
 

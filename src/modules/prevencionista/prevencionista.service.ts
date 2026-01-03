@@ -1,7 +1,5 @@
 import { getWorkerById, getWorkers } from "../workers/worker.service";
 import type { Worker } from "../workers/worker.service";
-import { getDocumentsForWorker } from "../documents/documents.service";
-import type { DocumentRecord } from "../documents/documents.service";
 import { getIRLsForWorker } from "../irl/irl.service";
 import type { IRL } from "../irl/irl.service";
 import { getTalksForWorker } from "../talks/talk.service";
@@ -15,7 +13,7 @@ import type { FindingIncident } from "../findingIncidents/findingIncident.servic
 
 export interface WorkerActivity {
   id: string;
-  type: 'document' | 'irl' | 'talk' | 'fitForWork' | 'art' | 'findingIncident';
+  type: 'irl' | 'talk' | 'fitForWork' | 'art' | 'findingIncident';
   title: string;
   date: Date;
   description: string;
@@ -27,7 +25,6 @@ export interface WorkerActivity {
 export interface WorkerTimelineData {
   worker: Worker;
   activities: WorkerActivity[];
-  documents: DocumentRecord[];
   irls: IRL[];
   talks: Talk[];
   fitForWork: FitForWork[];
@@ -45,7 +42,6 @@ export async function getWorkerTimeline(workerId: string): Promise<WorkerTimelin
   try {
     const [
       worker,
-      documents,
       irls,
       talks,
       fitForWork,
@@ -53,7 +49,6 @@ export async function getWorkerTimeline(workerId: string): Promise<WorkerTimelin
       findingIncidents
     ] = await Promise.all([
       getWorkerById(workerId),
-      getDocumentsForWorker(workerId),
       getIRLsForWorker(workerId),
       getTalksForWorker(workerId),
       getFitForWorkForWorker(workerId),
@@ -75,20 +70,6 @@ export async function getWorkerTimeline(workerId: string): Promise<WorkerTimelin
 
     // Convertir todas las actividades a formato unificado
     const activities: WorkerActivity[] = [];
-
-    // Documentos
-    documents.forEach((doc) => {
-      activities.push({
-        id: doc.id,
-        type: 'document',
-        title: doc.titulo,
-        date: safeDate(doc.fecha, doc.creadoEn),
-        description: doc.descripcion || doc.titulo,
-        status: doc.estado,
-        workerId,
-        metadata: { document: doc }
-      });
-    });
 
     // IRLs
     irls.forEach((irl) => {
@@ -166,7 +147,6 @@ export async function getWorkerTimeline(workerId: string): Promise<WorkerTimelin
     return {
       worker,
       activities,
-      documents,
       irls,
       talks,
       fitForWork,

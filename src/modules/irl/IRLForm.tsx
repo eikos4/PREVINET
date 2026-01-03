@@ -3,6 +3,8 @@ import { addIRL } from "./irl.service";
 
 import { getWorkers } from "../workers/worker.service";
 import type { Worker } from "../workers/worker.service";
+import { createObra, listObras, type Obra } from "../obras/obras.service";
+import { getCurrentUser } from "../auth/auth.service";
 
 export default function IRLForm({
   onCreated,
@@ -12,7 +14,9 @@ export default function IRLForm({
   creadoPorUserId?: string;
 }) {
   const [mode, setMode] = useState<"form" | "file">("form");
-  const [obra, setObra] = useState("");
+  const [obraId, setObraId] = useState<string>("");
+  const [obras, setObras] = useState<Obra[]>([]);
+  const [obraQuickName, setObraQuickName] = useState("");
   const [fecha, setFecha] = useState("");
   const [titulo, setTitulo] = useState("");
   const [descripcion, setDescripcion] = useState("");
@@ -27,12 +31,20 @@ export default function IRLForm({
 
   useEffect(() => {
     getWorkers().then(setWorkers);
+    listObras()
+      .then((all) => setObras(all.filter((o) => o.estado !== "inactiva")))
+      .catch(() => setObras([]));
   }, []);
 
   const selectableWorkers = useMemo(
     () => workers.filter((w) => w.habilitado),
     [workers]
   );
+
+  const obraNombre = useMemo(() => {
+    if (!obraId) return "";
+    return obras.find((o) => o.id === obraId)?.nombre || "";
+  }, [obraId, obras]);
 
   const toggleWorker = (id: string) => {
     setSelected((prev) =>
@@ -43,8 +55,14 @@ export default function IRLForm({
   const handleSubmit = async () => {
     setError("");
 
-    if (!obra || !fecha) {
+    if (!obraId || !fecha) {
       setError("Completa obra y fecha");
+      return;
+    }
+
+    const obra = obras.find((o) => o.id === obraId)?.nombre || "";
+    if (!obra.trim()) {
+      setError("Selecciona la obra/faena");
       return;
     }
 
@@ -125,7 +143,8 @@ export default function IRLForm({
       creadoPorUserId,
     });
 
-    setObra("");
+    setObraId("");
+    setObraQuickName("");
     setFecha("");
     setTitulo("");
     setDescripcion("");
@@ -174,11 +193,46 @@ export default function IRLForm({
         <div className="form-grid">
           <div className="flex flex-col">
             <span className="text-sm font-medium text-gray-500 mb-1">Obra / Faena</span>
-            <input
-              placeholder="Obra / Faena"
-              value={obra}
-              onChange={(e) => setObra(e.target.value)}
-            />
+            <select value={obraId} onChange={(e) => setObraId(e.target.value)}>
+              <option value="">Selecciona obra…</option>
+              {obras
+                .slice()
+                .sort((a, b) => (a.nombre || "").localeCompare(b.nombre || "", "es"))
+                .map((o) => (
+                  <option key={o.id} value={o.id}>
+                    {o.nombre}
+                  </option>
+                ))}
+            </select>
+
+            <div className="mt-2 flex flex-wrap items-center gap-2">
+              <input
+                className="flex-1 min-w-0 rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm placeholder:text-slate-400 focus:border-blue-500 focus:outline-none"
+                placeholder="Crear obra rápida…"
+                value={obraQuickName}
+                onChange={(e) => setObraQuickName(e.target.value)}
+              />
+              <button
+                type="button"
+                className="flex-none btn-secondary"
+                onClick={async () => {
+                  setError("");
+                  try {
+                    const user = await getCurrentUser();
+                    const created = await createObra({ nombre: obraQuickName, empresaId: user?.companyId ?? null });
+                    const next = await listObras();
+                    setObras(next.filter((o) => o.estado !== "inactiva"));
+                    setObraId(created.id);
+                    setObraQuickName("");
+                  } catch (e) {
+                    const msg = e instanceof Error ? e.message : "No se pudo crear la obra";
+                    setError(msg);
+                  }
+                }}
+              >
+                Crear
+              </button>
+            </div>
           </div>
 
           <div className="flex flex-col">
@@ -241,7 +295,7 @@ export default function IRLForm({
           <div className="flex flex-col" style={{ gridColumn: "1 / -1" }}>
             <span className="text-sm font-medium text-gray-500 mb-1">Respuesta esperada 1</span>
             <input
-              placeholder={obra ? obra : "Respuesta esperada"}
+              placeholder={obraNombre ? obraNombre : "Respuesta esperada"}
               value={q1Expected}
               onChange={(e) => setQ1Expected(e.target.value)}
             />

@@ -35,8 +35,13 @@ export type Worker = {
   creadoEn: Date;
 };
 
-export async function getWorkers(): Promise<Worker[]> {
-  return await db.table("workers").toArray();
+export async function getWorkers(companyRut?: string): Promise<Worker[]> {
+  const all = await db.table<Worker>("workers").toArray();
+  if (companyRut) {
+    const target = companyRut.trim();
+    return all.filter((w) => (w.empresaRut || "") === target);
+  }
+  return all;
 }
 
 export async function getWorkerById(id: string): Promise<Worker | undefined> {

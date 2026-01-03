@@ -111,6 +111,10 @@ export default function TalkList() {
 
                         <p className="text-sm text-gray-600 mb-3 m-0">{formatDateTime(t.fechaHora)}</p>
 
+                        {t.obra && (
+                          <p className="text-sm text-gray-600 mb-3 m-0">Obra: {t.obra}</p>
+                        )}
+
                         <div className="flex items-center gap-3 mb-3">
                           <div className="h-1.5 flex-1 bg-gray-200 rounded-full overflow-hidden max-w-xs">
                             <div

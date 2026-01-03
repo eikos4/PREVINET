@@ -1,16 +1,13 @@
 import { getWorkerById } from './worker.service';
-import { getDocumentsForWorker } from '../documents/documents.service';
 import { getIRLsForWorker } from '../irl/irl.service';
 import { getTalksForWorker } from '../talks/talk.service';
 import { getFitForWorkForWorker } from '../fitForWork/fitForWork.service';
 import { getARTsForWorker } from '../art/art.service';
 import { getFindingIncidents } from '../findingIncidents/findingIncident.service';
 import type { Worker } from './worker.service';
-import type { DocumentRecord } from '../documents/documents.service';
 
 export type WorkerDetailData = {
   worker: Worker;
-  documents: DocumentRecord[];
   irls: any[];
   talks: any[];
   fitForWork: any[];
@@ -22,9 +19,8 @@ export type WorkerDetailData = {
 
 export async function getWorkerCompleteData(workerId: string): Promise<Omit<WorkerDetailData, 'loading' | 'error'>> {
   try {
-    const [worker, documents, irls, talks, fitForWork, art, findingIncidents] = await Promise.all([
+    const [worker, irls, talks, fitForWork, art, findingIncidents] = await Promise.all([
       getWorkerById(workerId),
-      getDocumentsForWorker(workerId),
       getIRLsForWorker(workerId),
       getTalksForWorker(workerId),
       getFitForWorkForWorker(workerId),
@@ -44,7 +40,6 @@ export async function getWorkerCompleteData(workerId: string): Promise<Omit<Work
 
     return {
       worker,
-      documents: documents || [],
       irls: irls || [],
       talks: talks || [],
       fitForWork: fitForWork || [],
@@ -74,7 +69,7 @@ export function getWorkerSignatureStatus(worker: Worker): {
   };
 }
 
-export function getDocumentSignaturesSummary(documents: DocumentRecord[]): {
+export function getDocumentSignaturesSummary(): {
   total: number;
   signed: number;
   pending: number;
@@ -85,28 +80,10 @@ export function getDocumentSignaturesSummary(documents: DocumentRecord[]): {
     geo?: { lat: number; lng: number; accuracy?: number };
   }>;
 } {
-  const total = documents.length;
-  const signed = documents.filter(doc => 
-    doc.asignados.some(assignment => assignment.firmadoEn)
-  ).length;
-  const pending = total - signed;
-
-  const signedDocuments = documents
-    .filter(doc => doc.asignados.some(assignment => assignment.firmadoEn))
-    .map(doc => {
-      const assignment = doc.asignados.find(a => a.firmadoEn);
-      return {
-        documentTitle: doc.titulo,
-        signedDate: assignment!.firmadoEn!,
-        signedBy: `${assignment!.firmadoPorNombre} (${assignment!.firmadoPorRut})`,
-        geo: assignment!.geo
-      };
-    });
-
   return {
-    total,
-    signed,
-    pending,
-    signedDocuments
+    total: 0,
+    signed: 0,
+    pending: 0,
+    signedDocuments: [],
   };
 }

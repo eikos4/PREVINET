@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { getWorkerCompleteData, getWorkerSignatureStatus, getDocumentSignaturesSummary } from "./workerDetail.service";
+import { getWorkerCompleteData, getWorkerSignatureStatus } from "./workerDetail.service";
 import type { WorkerDetailData } from "./workerDetail.service";
 
 type WorkerDetailViewProps = {
@@ -11,7 +11,7 @@ export default function WorkerDetailView({ workerId, onBack }: WorkerDetailViewP
   const [data, setData] = useState<WorkerDetailData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [activeTab, setActiveTab] = useState<"info" | "documents" | "activities" | "signatures">("info");
+  const [activeTab, setActiveTab] = useState<"info" | "activities" | "signatures">("info");
 
   useEffect(() => {
     const loadWorkerData = async () => {
@@ -66,7 +66,6 @@ export default function WorkerDetailView({ workerId, onBack }: WorkerDetailViewP
   }
 
   const signatureStatus = getWorkerSignatureStatus(data.worker);
-  const documentSummary = getDocumentSignaturesSummary(data.documents);
 
   const renderInfoTab = () => (
     <div className="worker-info">
@@ -141,62 +140,6 @@ export default function WorkerDetailView({ workerId, onBack }: WorkerDetailViewP
             {data.worker.expuestoA.otros && (
               <div className="risk-item">Otros: {data.worker.expuestoA.otrosDetalle}</div>
             )}
-          </div>
-        </div>
-      )}
-    </div>
-  );
-
-  const renderDocumentsTab = () => (
-    <div className="worker-documents">
-      <div className="card">
-        <h3>Resumen de Documentos</h3>
-        <div className="document-summary">
-          <div className="summary-item">
-            <strong>Total Documentos:</strong> {documentSummary.total}
-          </div>
-          <div className="summary-item">
-            <strong>Firmados:</strong> {documentSummary.signed}
-          </div>
-          <div className="summary-item">
-            <strong>Pendientes:</strong> {documentSummary.pending}
-          </div>
-        </div>
-      </div>
-
-      {data.documents.length > 0 && (
-        <div className="card">
-          <h3>Documentos Asignados</h3>
-          <div className="document-list">
-            {data.documents.map((doc) => {
-              const assignment = doc.asignados.find(a => a.workerId === workerId);
-              const isSigned = !!assignment?.firmadoEn;
-              
-              return (
-                <div key={doc.id} className="document-item">
-                  <div className="document-header">
-                    <h4>{doc.titulo}</h4>
-                    <span className={`status-badge ${isSigned ? 'completed' : 'pending'}`}>
-                      {isSigned ? 'Firmado' : 'Pendiente'}
-                    </span>
-                  </div>
-                  <div className="document-details">
-                    <p><strong>Categoría:</strong> {doc.categoria || 'Sin categoría'}</p>
-                    <p><strong>Fecha:</strong> {doc.fecha}</p>
-                    <p><strong>Descripción:</strong> {doc.descripcion || 'Sin descripción'}</p>
-                    {isSigned && assignment && (
-                      <div className="signature-info">
-                        <p><strong>Firmado por:</strong> {assignment.firmadoPorNombre} ({assignment.firmadoPorRut})</p>
-                        <p><strong>Fecha de firma:</strong> {assignment.firmadoEn ? new Date(assignment.firmadoEn).toLocaleDateString() : 'N/A'}</p>
-                        {assignment.geo && (
-                          <p><strong>Ubicación:</strong> Lat: {assignment.geo.lat.toFixed(6)}, Lng: {assignment.geo.lng.toFixed(6)}</p>
-                        )}
-                      </div>
-                    )}
-                  </div>
-                </div>
-              );
-            })}
           </div>
         </div>
       )}
@@ -308,20 +251,7 @@ export default function WorkerDetailView({ workerId, onBack }: WorkerDetailViewP
           </div>
         )}
 
-        {documentSummary.signedDocuments.map((doc, index) => (
-          <div key={index} className="signature-record">
-            <h4>{doc.documentTitle}</h4>
-            <div className="signature-details">
-              <p><strong>Firmado por:</strong> {doc.signedBy}</p>
-              <p><strong>Fecha:</strong> {new Date(doc.signedDate).toLocaleDateString()}</p>
-              {doc.geo && (
-                <p><strong>Ubicación:</strong> Lat: {doc.geo.lat.toFixed(6)}, Lng: {doc.geo.lng.toFixed(6)}</p>
-              )}
-            </div>
-          </div>
-        ))}
-
-        {!signatureStatus.hasSignedEnrollment && documentSummary.signedDocuments.length === 0 && (
+        {!signatureStatus.hasSignedEnrollment && (
           <p>No hay firmas registradas para este trabajador.</p>
         )}
       </div>
@@ -349,12 +279,6 @@ export default function WorkerDetailView({ workerId, onBack }: WorkerDetailViewP
           Información General
         </button>
         <button
-          className={`tab-button ${activeTab === "documents" ? "active" : ""}`}
-          onClick={() => setActiveTab("documents")}
-        >
-          Documentos ({documentSummary.total})
-        </button>
-        <button
           className={`tab-button ${activeTab === "activities" ? "active" : ""}`}
           onClick={() => setActiveTab("activities")}
         >
@@ -364,13 +288,12 @@ export default function WorkerDetailView({ workerId, onBack }: WorkerDetailViewP
           className={`tab-button ${activeTab === "signatures" ? "active" : ""}`}
           onClick={() => setActiveTab("signatures")}
         >
-          Firmas ({signatureStatus.hasSignedEnrollment ? documentSummary.signedDocuments.length + 1 : documentSummary.signedDocuments.length})
+          Firmas
         </button>
       </div>
 
       <div className="tab-content">
         {activeTab === "info" && renderInfoTab()}
-        {activeTab === "documents" && renderDocumentsTab()}
         {activeTab === "activities" && renderActivitiesTab()}
         {activeTab === "signatures" && renderSignaturesTab()}
       </div>

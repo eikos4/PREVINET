@@ -7,6 +7,7 @@ import {
   downloadBlobAsFile,
   getSignedDocumentPdfByKey,
 } from "./documentsPdf.service";
+import TemplateSigner from "../templates/TemplateSigner";
 
 export default function DocumentWorkerList({ worker }: { worker: Worker }) {
   const [docs, setDocs] = useState<DocumentRecord[]>([]);
@@ -82,7 +83,7 @@ export default function DocumentWorkerList({ worker }: { worker: Worker }) {
             Cargando documentos…
           </p>
         </div>
-      </div>
+        </div>
     );
   }
 
@@ -105,15 +106,18 @@ export default function DocumentWorkerList({ worker }: { worker: Worker }) {
   }
 
   return (
-    <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
-      <div className="bg-gradient-to-r from-blue-600 to-blue-700 px-6 py-4">
-        <h3 className="text-xl font-semibold text-white flex items-center gap-2 m-0">
-          <span className="text-2xl">📎</span>
-          <span>Documentos asignados</span>
-        </h3>
-      </div>
+    <div className="space-y-6">
+      <TemplateSigner worker={worker} title="Firmar documento (plantillas)" />
 
-      <div className="p-6">
+      <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
+        <div className="bg-gradient-to-r from-blue-600 to-blue-700 px-6 py-4">
+          <h3 className="text-xl font-semibold text-white flex items-center gap-2 m-0">
+            <span className="text-2xl">📎</span>
+            <span>Documentos asignados</span>
+          </h3>
+        </div>
+
+        <div className="p-6">
         {error && (
           <p className="form-error" style={{ marginTop: 0 }}>
             {error}
@@ -219,6 +223,7 @@ export default function DocumentWorkerList({ worker }: { worker: Worker }) {
         }}
         onConfirm={handleConfirmSign}
       />
+      </div>
     </div>
   );
 }

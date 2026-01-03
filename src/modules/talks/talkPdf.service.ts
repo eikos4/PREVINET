@@ -147,6 +147,31 @@ export async function saveSignedTalkPdf(params: {
   };
 
   await db.table("talkSignedPdfs").put(record);
+
+  // Emit notification to prevencionista
+  try {
+    const { createNotification } = await import("../notifications/notifications.service");
+    // Resolve companyId from obra if possible
+    let companyId: string | null = null;
+    try {
+      const obra = await db.table("obras").get(params.talk.obra);
+      companyId = (obra as any)?.empresaId ?? null;
+    } catch {}
+
+    await createNotification({
+      type: "talk_signed",
+      title: "Charla firmada",
+      body: `${params.assignment.firmadoPorNombre ?? "Un trabajador"} firmó la charla \"${params.talk.tema}\"`,
+      toRole: "prevencionista",
+      companyId,
+      fromUserId: params.assignment.workerId,
+      related: { entity: "talk", id: params.talk.id }
+    });
+  } catch (e) {
+    // Non-fatal
+    console.error("No se pudo crear notificación (talk_signed)", e);
+  }
+
   return record;
 }
 

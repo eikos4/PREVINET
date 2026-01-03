@@ -3,9 +3,9 @@ import { useEffect, useMemo, useState } from "react";
 import Login from "../modules/auth/Login";
 import { getCurrentUser, logout } from "../modules/auth/auth.service";
 import type { User, UserRole } from "../modules/auth/auth.service";
+import { normalizeRole } from "../modules/auth/auth.service";
 
-import WorkerForm from "../modules/workers/WorkerForm";
-import WorkerList from "../modules/workers/WorkerList.tsx";
+import WorkersManage from "../modules/workers/WorkersManage";
 import WorkerProfile from "../modules/workers/WorkerProfile";
 import WorkerJourney from "../modules/workers/WorkerJourney";
 import { getWorkerById } from "../modules/workers/worker.service";
@@ -31,17 +31,19 @@ import FitForWorkForm from "../modules/fitForWork/FitForWorkForm";
 import FitForWorkList from "../modules/fitForWork/FitForWorkList";
 import FitForWorkWorkerList from "../modules/fitForWork/FitForWorkWorkerList";
 
-import FindingIncidentForm from "../modules/findingIncidents/FindingIncidentForm.tsx";
-import FindingIncidentList from "../modules/findingIncidents/FindingIncidentList.tsx";
-
-import DocumentForm from "../modules/documents/DocumentForm.tsx";
-import DocumentList from "../modules/documents/DocumentList.tsx";
-import DocumentWorkerList from "../modules/documents/DocumentWorkerList.tsx";
+import FindingIncidentsView from "../modules/findingIncidents/FindingIncidentsView";
 
 import Dashboard from "../modules/dashboard/Dashboard";
 import OnlineStatus from "../components/OnlineStatus";
+import InstallBanner from "../components/InstallBanner";
+import NotificationsBell from "../components/NotificationsBell";
+import { Toaster } from "sonner";
 
-import AdminUsers from "../modules/admin/AdminUsers.tsx";
+import AdminUsers from "../modules/admin/AdminUsersPro.tsx";
+import EmpresasView from "../modules/empresas/EmpresasView.tsx";
+import ObrasView from "../modules/obras/ObrasView";
+import TemplatesView from "../modules/templates/TemplatesView";
+import ExcelTemplatesView from "../modules/templates/ExcelTemplatesView";
 
 import PrevencionistaTimelineView from "../modules/prevencionista/PrevencionistaTimelineView";
 
@@ -49,8 +51,6 @@ import {
   canViewDashboard,
   canManageWorkers,
   canViewWorkerDetail,
-  canManageDocuments,
-  canViewDocuments,
   canManageIRL,
   canViewIRL,
   canManageTalks,
@@ -67,8 +67,10 @@ import {
   isSystemAdmin,
 } from "../modules/auth/permissions";
 
+import { APP_MODULES } from "./modules.registry";
+
 type View = "landing" | "login" | "app";
-type Section = "inicio" | "dashboard" | "workers" | "workerTimeline" | "art" | "profile" | "irl" | "talks" | "fitForWork" | "findingIncidents" | "documents" | "adminUsers";
+type Section = "inicio" | "dashboard" | "workers" | "workerTimeline" | "art" | "profile" | "irl" | "talks" | "fitForWork" | "findingIncidents" | "templates" | "excelTemplates" | "obras" | "empresas" | "adminUsers";
 
 export default function App() {
   const [view, setView] = useState<View>("landing");
@@ -110,6 +112,7 @@ export default function App() {
   }, []);
 
   const role: UserRole | null = user?.role ?? null;
+  const effectiveRole: UserRole | null = role ? normalizeRole(role) : null;
 
   /* ===============================
      LOAD WORKER (IF TRABAJADOR)
@@ -164,30 +167,58 @@ export default function App() {
      ALLOWED SECTIONS BY ROLE
      =============================== */
   const allowedSections = useMemo<Section[]>(() => {
-    if (!role) return [];
+    if (!effectiveRole) return [];
+    const canSeeIRL = canManageIRL(effectiveRole) || canViewIRL(effectiveRole);
+    const canSeeTalks = canManageTalks(effectiveRole) || canViewTalks(effectiveRole);
+    const canSeeFitForWork = canManageFitForWork(effectiveRole) || canViewFitForWork(effectiveRole);
+    const canSeeFindingIncidents =
+      canViewFindingIncidents(effectiveRole) || canCreateFindingIncidents(effectiveRole);
 
-    const s: Section[] = [];
-    if (role === "trabajador") s.push("inicio");
-    if (role === "trabajador") s.push("profile");
-    if (canViewDashboard(role)) s.push("dashboard");
-    if (canManageWorkers(role)) s.push("workers");
-    if (canViewWorkerDetail(role)) s.push("workerTimeline");
-    if (canManageDocuments(role)) s.push("documents");
-    if (canViewDocuments(role)) s.push("documents");
-    if (canManageIRL(role)) s.push("irl");
-    if (canViewIRL(role)) s.push("irl");
-    if (canManageTalks(role)) s.push("talks");
-    if (canViewTalks(role)) s.push("talks");
-    if (canManageFitForWork(role)) s.push("fitForWork");
-    if (canViewFitForWork(role)) s.push("fitForWork");
-    if (canViewART(role)) s.push("art");
-    if (canViewFindingIncidents(role) || canCreateFindingIncidents(role)) {
-      s.push("findingIncidents");
-    }
-    if (role === "admin") s.push("adminUsers");
+    const hasModuleAccess = (key: Section): boolean => {
+      switch (key) {
+        case "inicio":
+          return effectiveRole === "trabajador";
+        case "profile":
+          return effectiveRole === "trabajador";
+        case "dashboard":
+          return canViewDashboard(effectiveRole);
+        case "workers":
+          return canManageWorkers(effectiveRole);
+        case "workerTimeline":
+          return canViewWorkerDetail(effectiveRole);
+        case "templates":
+          return effectiveRole !== "trabajador";
+        case "excelTemplates":
+          return effectiveRole !== "trabajador";
+        case "empresas":
+          return effectiveRole !== "trabajador";
+        case "obras":
+          return effectiveRole !== "trabajador";
+        case "irl":
+          return canSeeIRL;
+        case "talks":
+          return canSeeTalks;
+        case "fitForWork":
+          return canSeeFitForWork;
+        case "art":
+          return canViewART(effectiveRole);
+        case "findingIncidents":
+          return canSeeFindingIncidents;
+        case "adminUsers":
+          return effectiveRole === "superadmin";
+        default:
+          return false;
+      }
+    };
 
-    return s;
-  }, [role]);
+    return APP_MODULES
+      .filter((m) => {
+        if (m.allowedRoles === "*") return true;
+        return m.allowedRoles.includes(effectiveRole);
+      })
+      .map((m) => m.key)
+      .filter((key) => hasModuleAccess(key));
+  }, [effectiveRole]);
 
   /* ===============================
      GUARD: REDIRECT IF FORBIDDEN
@@ -198,6 +229,32 @@ export default function App() {
       setSection(allowedSections[0]);
     }
   }, [view, role, section, allowedSections]);
+
+  // Listen to notification open events to navigate to related content
+  useEffect(() => {
+    const handler = (ev: Event) => {
+      const custom = ev as CustomEvent;
+      const n = custom.detail as { related?: { entity: string; id: string } } | undefined;
+      if (!n || !n.related) return;
+      const map: Record<string, Section> = {
+        talk: "talks",
+        irl: "irl",
+        art: "art",
+        document: "templates",
+        fitForWork: "fitForWork",
+      };
+      const key = map[n.related.entity];
+      if (key) {
+        setView("app");
+        setSection(key);
+        setMenuOpen(false);
+        setReload((r) => r + 1);
+      }
+    };
+
+    window.addEventListener("notification:open", handler as EventListener);
+    return () => window.removeEventListener("notification:open", handler as EventListener);
+  }, []);
 
   const roleLabel = (r: UserRole) => {
     switch (r) {
@@ -213,6 +270,8 @@ export default function App() {
         return "Auditor";
       case "admin":
         return "Admin Empresa";
+      case "superadmin":
+        return "Superadmin";
       default:
         return "Usuario";
     }
@@ -240,8 +299,14 @@ export default function App() {
         return "Fit-for-Work";
       case "findingIncidents":
         return "Hallazgos/Incidencias";
-      case "documents":
+      case "templates":
         return "Documentos";
+      case "excelTemplates":
+        return "Plantillas";
+      case "obras":
+        return "Obras";
+      case "empresas":
+        return "Empresas";
       case "adminUsers":
         return "Usuarios";
       default:
@@ -255,6 +320,7 @@ export default function App() {
   if (view === "landing") {
     return (
       <div className="landing">
+        <InstallBanner />
         <div className="landing-shell">
           <div className="landing-card landing-hero">
             <img className="landing-logo" src="/logo.png" alt="PreviNet" />
@@ -314,31 +380,21 @@ export default function App() {
   }
 
   const readOnly =
-    isReadOnly(role) || isSystemAdmin(role);
+    isReadOnly(effectiveRole ?? role) || isSystemAdmin(effectiveRole ?? role);
 
-  const canSeeDocuments = canManageDocuments(role) || canViewDocuments(role);
-  const canSeeIRL = canManageIRL(role) || canViewIRL(role);
-  const canSeeTalks = canManageTalks(role) || canViewTalks(role);
-  const canSeeFitForWork = canManageFitForWork(role) || canViewFitForWork(role);
-  const canSeeFindingIncidents = canViewFindingIncidents(role) || canCreateFindingIncidents(role);
-
-  const navItems: Array<{ key: Section; label: string; icon: string; visible: boolean }> = [
-    { key: "inicio", label: "Inicio", icon: "🏁", visible: role === "trabajador" },
-    { key: "profile", label: "Mi perfil", icon: "🙍", visible: role === "trabajador" },
-    { key: "dashboard", label: "Dashboard", icon: "📊", visible: canViewDashboard(role) },
-    { key: "workers", label: "Trabajadores", icon: "👷", visible: canManageWorkers(role) },
-    { key: "workerTimeline", label: "Línea de tiempo", icon: "🕒", visible: canViewWorkerDetail(role) },
-    { key: "documents", label: "Documentos", icon: "📎", visible: canSeeDocuments },
-    { key: "irl", label: "IRL", icon: "🧾", visible: canSeeIRL },
-    { key: "talks", label: "Charlas", icon: "🗣️", visible: canSeeTalks },
-    { key: "fitForWork", label: "Fit-for-Work", icon: "✅", visible: canSeeFitForWork },
-    { key: "art", label: "ART", icon: "📝", visible: canViewART(role) },
-    { key: "findingIncidents", label: "Hallazgos/Incidencias", icon: "🧱", visible: canSeeFindingIncidents },
-    { key: "adminUsers", label: "Usuarios", icon: "👥", visible: role === "admin" },
-  ];
+  const navItems: Array<{ key: Section; label: string; icon: string; visible: boolean }> = APP_MODULES.map(
+    (m) => ({
+      key: m.key,
+      label: m.label,
+      icon: m.icon,
+      visible: allowedSections.includes(m.key),
+    })
+  );
 
   return (
     <div className="layout">
+      <InstallBanner />
+      <Toaster position="top-center" richColors />
       {/* OVERLAY MOBILE */}
       {menuOpen && (
         <div
@@ -352,8 +408,15 @@ export default function App() {
         <div className="sidebar-header">
           <div className="sidebar-brand">PreviNet</div>
           <div className="sidebar-meta">
-            <div className="sidebar-role">{roleLabel(role)}</div>
-            {user.name && <div className="sidebar-user">{user.name}</div>}
+            <div style={{display: 'flex', alignItems: 'center', justifyContent: 'space-between'}}>
+              <div>
+                <div className="sidebar-role">{roleLabel(role)}</div>
+                {user.name && <div className="sidebar-user">{user.name}</div>}
+              </div>
+              <div style={{marginLeft: 8}}>
+                <NotificationsBell />
+              </div>
+            </div>
           </div>
         </div>
 
@@ -458,52 +521,19 @@ export default function App() {
           />
         )}
 
-        {section === "dashboard" && canViewDashboard(role) && (
+        {section === "dashboard" && canViewDashboard(effectiveRole ?? role) && (
           <Dashboard />
         )}
 
-        {section === "workers" && canManageWorkers(role) && (
-          <>
-            {!readOnly && (
-              <WorkerForm
-                onCreated={() => setReload((r) => r + 1)}
-              />
-            )}
-            <WorkerList key={`w-${reload}`} readOnly={readOnly} />
-          </>
+        {section === "workers" && canManageWorkers(effectiveRole ?? role) && (
+          <WorkersManage readOnly={readOnly} />
         )}
 
-        {section === "workerTimeline" && canViewWorkerDetail(role) && (
+        {section === "workerTimeline" && canViewWorkerDetail(effectiveRole ?? role) && (
           <PrevencionistaTimelineView />
         )}
 
-        {section === "documents" && canManageDocuments(role) && (
-          <>
-            {!readOnly && (
-              <DocumentForm
-                onCreated={() => setReload((r) => r + 1)}
-                creadoPorUserId={user.id}
-              />
-            )}
-            <DocumentList key={`d-${reload}`} />
-          </>
-        )}
-
-        {section === "documents" && canViewDocuments(role) && (
-          <>
-            {worker ? (
-              <DocumentWorkerList worker={worker} key={`dw-${reload}`} />
-            ) : (
-              <div className="card">
-                <p style={{ margin: 0, color: "#64748b" }}>
-                  Cargando documentos…
-                </p>
-              </div>
-            )}
-          </>
-        )}
-
-        {section === "irl" && canManageIRL(role) && (
+        {section === "irl" && canManageIRL(effectiveRole ?? role) && (
           <>
             {!readOnly && (
               <IRLForm
@@ -515,7 +545,7 @@ export default function App() {
           </>
         )}
 
-        {section === "irl" && canViewIRL(role) && (
+        {section === "irl" && canViewIRL(effectiveRole ?? role) && (
           <>
             {worker ? (
               <IRLWorkerList worker={worker} key={`iw-${reload}`} />
@@ -529,9 +559,9 @@ export default function App() {
           </>
         )}
 
-        {section === "talks" && canManageTalks(role) && (
+        {section === "talks" && canManageTalks(effectiveRole ?? role) && (
           <>
-            {!readOnly && canCreateTalks(role) && (
+            {!readOnly && canCreateTalks(effectiveRole ?? role) && (
               <TalkForm
                 creadoPorUserId={user.id}
                 onCreated={() => setReload((r) => r + 1)}
@@ -541,7 +571,7 @@ export default function App() {
           </>
         )}
 
-        {section === "talks" && canViewTalks(role) && (
+        {section === "talks" && canViewTalks(effectiveRole ?? role) && (
           <>
             {worker ? (
               <TalkWorkerList worker={worker} key={`tw-${reload}`} />
@@ -555,9 +585,9 @@ export default function App() {
           </>
         )}
 
-        {section === "fitForWork" && canManageFitForWork(role) && (
+        {section === "fitForWork" && canManageFitForWork(effectiveRole ?? role) && (
           <>
-            {!readOnly && canCreateFitForWork(role) && (
+            {!readOnly && canCreateFitForWork(effectiveRole ?? role) && (
               <FitForWorkForm
                 creadoPorUserId={user.id}
                 onCreated={() => setReload((r) => r + 1)}
@@ -567,7 +597,7 @@ export default function App() {
           </>
         )}
 
-        {section === "fitForWork" && canViewFitForWork(role) && (
+        {section === "fitForWork" && canViewFitForWork(effectiveRole ?? role) && (
           <>
             {worker ? (
               <FitForWorkWorkerList worker={worker} key={`ffww-${reload}`} />
@@ -581,7 +611,7 @@ export default function App() {
           </>
         )}
 
-        {section === "art" && canViewART(role) && (
+        {section === "art" && canViewART(effectiveRole ?? role) && (
           <>
             {role === "trabajador" ? (
               worker ? (
@@ -595,7 +625,7 @@ export default function App() {
               )
             ) : (
               <>
-                {canCreateART(role) && !readOnly && (
+                {canCreateART(effectiveRole ?? role) && !readOnly && (
                   <ArtForm
                     creadoPorUserId={user.id}
                     onCreated={() => setReload((r) => r + 1)}
@@ -609,19 +639,12 @@ export default function App() {
 
         {section === "findingIncidents" && (
           <>
-            {canCreateFindingIncidents(role) && !readOnly && (
-              <FindingIncidentForm
-                creadoPorUserId={user.id}
-                defaultObra={worker?.obra}
-                onCreated={() => setReload((r) => r + 1)}
-              />
-            )}
-
-            {canViewFindingIncidents(role) && (
-              <FindingIncidentList
+            {canViewFindingIncidents(effectiveRole ?? role) && (
+              <FindingIncidentsView
                 readOnly={readOnly}
+                canCreate={canCreateFindingIncidents(effectiveRole ?? role) && !readOnly}
                 currentUserId={user.id}
-                reloadKey={reload}
+                defaultObra={worker?.obra}
               />
             )}
           </>
@@ -641,8 +664,24 @@ export default function App() {
           </>
         )}
 
-        {section === "adminUsers" && role === "admin" && (
+        {section === "adminUsers" && (effectiveRole ?? role) === "superadmin" && (
           <AdminUsers currentUser={user} />
+        )}
+
+        {section === "empresas" && (effectiveRole ?? role) !== "trabajador" && (
+          <EmpresasView />
+        )}
+
+        {section === "obras" && (effectiveRole ?? role) !== "trabajador" && (
+          <ObrasView />
+        )}
+
+        {section === "templates" && (effectiveRole ?? role) !== "trabajador" && (
+          <TemplatesView />
+        )}
+
+        {section === "excelTemplates" && (effectiveRole ?? role) !== "trabajador" && (
+          <ExcelTemplatesView />
         )}
       </main>
     </div>

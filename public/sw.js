@@ -7,6 +7,5 @@ self.addEventListener('activate', (e) => {
 });
 
 self.addEventListener('fetch', (event) => {
-  // TODO: add caching strategies here if you want offline support
-  return;
+  // Simple network-only or implement caching here
 });

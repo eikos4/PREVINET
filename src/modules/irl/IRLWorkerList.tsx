@@ -4,13 +4,14 @@ import { getIRLsForWorker, signIRL } from "./irl.service";
 import type { IRL } from "./irl.service";
 import SignatureModal from "./SignatureModal";
 import IRLReadConfirmModal from "./IRLReadConfirmModal";
-import { downloadBlobAsFile } from "./irlPdf.service";
+import { downloadBlobAsFile, getSignedIrlPdfByKey } from "./irlPdf.service";
 
 export default function IRLWorkerList({ worker }: { worker: Worker }) {
   const [irls, setIrls] = useState<IRL[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [signingId, setSigningId] = useState<string | null>(null);
+  const [downloadingKey, setDownloadingKey] = useState<string | null>(null);
   const [readingIrl, setReadingIrl] = useState<IRL | null>(null);
   const [pendingConfirm, setPendingConfirm] = useState<{
     verificationAnswers: { q1: string; q2: string };
@@ -145,6 +146,7 @@ export default function IRLWorkerList({ worker }: { worker: Worker }) {
           {sorted.map((i) => {
             const assignment = i.asignados.find((a) => a.workerId === worker.id);
             const firmado = !!assignment?.firmadoEn;
+            const pdfKey = assignment ? `${i.id}_${assignment.workerId}_${assignment.token}` : null;
 
             return (
               <div key={i.id} className="art-item">
@@ -166,7 +168,38 @@ export default function IRLWorkerList({ worker }: { worker: Worker }) {
                 </div>
 
                 {firmado ? (
-                  <span className="art-status">Firmado</span>
+                  <div className="flex" style={{ gap: 8, alignItems: "center" }}>
+                    <span className="art-status">Firmado</span>
+                    {assignment && (
+                      <button
+                        type="button"
+                        className="btn-secondary"
+                        disabled={downloadingKey === pdfKey}
+                        onClick={async () => {
+                          if (!assignment) return;
+                          setError("");
+                          setDownloadingKey(pdfKey);
+                          try {
+                            const rec = await getSignedIrlPdfByKey({
+                              irlId: i.id,
+                              workerId: assignment.workerId,
+                              token: assignment.token,
+                            });
+                            if (!rec) throw new Error("No se encontró el PDF firmado");
+                            downloadBlobAsFile(rec.pdf, rec.fileName);
+                          } catch (e) {
+                            const msg = e instanceof Error ? e.message : "No se pudo descargar";
+                            setError(msg);
+                          } finally {
+                            setDownloadingKey(null);
+                          }
+                        }}
+                        style={{ padding: "0.35rem 0.6rem", fontSize: "0.85rem" }}
+                      >
+                        {downloadingKey === pdfKey ? "Descargando..." : "Descargar PDF"}
+                      </button>
+                    )}
+                  </div>
                 ) : (
                   <div className="flex" style={{ gap: 8, alignItems: "center" }}>
                     {i.attachment?.blob && i.attachment.fileName && (

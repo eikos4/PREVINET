@@ -6,14 +6,24 @@ import {
   getSignedWorkerEnrollmentPdfByKey,
 } from "./workerEnrollmentPdf.service";
 
+import { getCurrentUser } from "../auth/auth.service";
+
 export default function WorkerList({ readOnly = false }: { readOnly?: boolean }) {
   const [workers, setWorkers] = useState<Worker[]>([]);
   const [updatingId, setUpdatingId] = useState<string | null>(null);
   const [error, setError] = useState("");
   const [downloadingId, setDownloadingId] = useState<string | null>(null);
 
-  const load = () => {
-    getWorkers().then(setWorkers);
+  const load = async () => {
+    const user = await getCurrentUser();
+    // If superadmin, show all (pass undefined). 
+    // If other role, pass user.companyRut.
+    // However, if superadmin wants to filter, we might need UI for that later.
+    // For now, adhere to "strict isolation":
+    // Superadmin -> All
+    // Others -> Company Specific
+    const scopeRut = user?.role === "superadmin" ? undefined : user?.companyRut;
+    getWorkers(scopeRut).then(setWorkers);
   };
 
   const downloadEnrollmentPdf = async (w: Worker) => {
@@ -102,7 +112,7 @@ export default function WorkerList({ readOnly = false }: { readOnly?: boolean })
                 <div>
                   <strong>{w.nombre}</strong>
                   <div className="worker-meta">
-                    {w.rut} · {w.cargo} · {w.obra}
+                    {w.rut} · <strong className="text-blue-600">PIN: {w.pin}</strong> · {w.cargo} · {w.obra}
                   </div>
                   {w.telefono && <div className="worker-meta">Contacto: {w.telefono}</div>}
                   {(w.empresaNombre || w.empresaRut) && (
@@ -120,9 +130,8 @@ export default function WorkerList({ readOnly = false }: { readOnly?: boolean })
 
               <div className="flex items-center gap-2" style={{ flexWrap: "wrap" }}>
                 <span
-                  className={`worker-status ${
-                    w.habilitado ? "ok" : "warn"
-                  }`}
+                  className={`worker-status ${w.habilitado ? "ok" : "warn"
+                    }`}
                 >
                   {w.habilitado ? "Habilitado" : "No habilitado"}
                 </span>

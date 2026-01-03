@@ -3,12 +3,14 @@ import type { Worker } from "../workers/worker.service";
 import { getFitForWorkForWorker, signFitForWork } from "./fitForWork.service";
 import type { FitForWork, FitForWorkQuestion } from "./fitForWork.service";
 import SignatureModal from "../irl/SignatureModal";
+import { downloadBlobAsFile, getSignedFitForWorkPdfByKey } from "./fitForWorkPdf.service";
 
 export default function FitForWorkWorkerList({ worker }: { worker: Worker }) {
   const [evaluations, setEvaluations] = useState<FitForWork[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [signingId, setSigningId] = useState<string | null>(null);
+  const [downloadingKey, setDownloadingKey] = useState<string | null>(null);
   const [pendingEvaluation, setPendingEvaluation] = useState<FitForWork | null>(null);
   const [responses, setResponses] = useState<FitForWorkQuestion[]>([]);
   const [showSignatureModal, setShowSignatureModal] = useState(false);
@@ -143,6 +145,7 @@ export default function FitForWorkWorkerList({ worker }: { worker: Worker }) {
             const assignment = e.asignados.find((a) => a.workerId === worker.id);
             const completado = !!assignment?.firmadoEn;
             const apto = assignment?.apto ?? false;
+            const pdfKey = assignment ? `${e.id}_${assignment.workerId}_${assignment.token}` : null;
 
             return (
               <div key={e.id} className="art-item">
@@ -172,9 +175,40 @@ export default function FitForWorkWorkerList({ worker }: { worker: Worker }) {
                 </div>
 
                 {completado ? (
-                  <span className="art-status" style={{ background: apto ? "#16a34a" : "#dc2626" }}>
-                    {apto ? "Apto" : "No Apto"}
-                  </span>
+                  <div className="flex" style={{ gap: 8, alignItems: "center" }}>
+                    <span className="art-status" style={{ background: apto ? "#16a34a" : "#dc2626" }}>
+                      {apto ? "Apto" : "No Apto"}
+                    </span>
+                    {assignment && (
+                      <button
+                        type="button"
+                        className="btn-secondary"
+                        disabled={downloadingKey === pdfKey}
+                        onClick={async () => {
+                          if (!assignment) return;
+                          setError("");
+                          setDownloadingKey(pdfKey);
+                          try {
+                            const rec = await getSignedFitForWorkPdfByKey({
+                              fitForWorkId: e.id,
+                              workerId: assignment.workerId,
+                              token: assignment.token,
+                            });
+                            if (!rec) throw new Error("No se encontró el PDF firmado");
+                            downloadBlobAsFile(rec.pdf, rec.fileName);
+                          } catch (err) {
+                            const msg = err instanceof Error ? err.message : "No se pudo descargar";
+                            setError(msg);
+                          } finally {
+                            setDownloadingKey(null);
+                          }
+                        }}
+                        style={{ padding: "0.35rem 0.6rem", fontSize: "0.85rem" }}
+                      >
+                        {downloadingKey === pdfKey ? "Descargando..." : "Descargar PDF"}
+                      </button>
+                    )}
+                  </div>
                 ) : (
                   <button
                     type="button"

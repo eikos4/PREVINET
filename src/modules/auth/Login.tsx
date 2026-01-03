@@ -1,6 +1,8 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { loginWithPin } from "./auth.service";
 import type { UserRole } from "./auth.service";
+import { listEmpresas } from "../empresas/empresas.service";
+import type { Empresa } from "../empresas/empresas.service";
 
 type Props = {
   onLogin: () => void;
@@ -9,10 +11,10 @@ type Props = {
 const ROLES: { id: UserRole; label: string; icon: string }[] = [
   { id: "trabajador", label: "Trabajador", icon: "👷" },
   { id: "prevencionista", label: "Prevencionista", icon: "🧑‍💼" },
+  { id: "administrador", label: "Administrador", icon: "🏢" },
   { id: "supervisor", label: "Supervisor", icon: "🧑‍🔧" },
-  { id: "administrador", label: "Administrador", icon: "⚙️" },
   { id: "auditor", label: "Auditor", icon: "📋" },
-  { id: "admin", label: "Admin Empresa", icon: "👑" },
+  { id: "superadmin", label: "Superadmin", icon: "👑" },
 ];
 
 const PreventNetLogo = () => (
@@ -40,6 +42,12 @@ export default function Login({ onLogin }: Props) {
   const [role, setRole] = useState<UserRole | null>(null);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+  const [companies, setCompanies] = useState<Empresa[]>([]);
+  const [selectedCompanyRut, setSelectedCompanyRut] = useState("");
+
+  useEffect(() => {
+    listEmpresas().then(setCompanies);
+  }, []);
 
   const handleSubmit = async () => {
     setError("");
@@ -56,7 +64,7 @@ export default function Login({ onLogin }: Props) {
 
     setLoading(true);
     try {
-      await loginWithPin(pin, role);
+      await loginWithPin(pin, role, selectedCompanyRut || undefined);
       onLogin();
     } catch (e) {
       const message = e instanceof Error ? e.message : "No se pudo iniciar sesión";
@@ -75,7 +83,7 @@ export default function Login({ onLogin }: Props) {
             <PreventNetLogo />
             <h1 className="login-brand-title">PREVINET</h1>
             <p className="login-brand-tagline">Sistema de Gestión de Prevención de Riesgos</p>
-            
+
           </div>
         </div>
 
@@ -106,6 +114,24 @@ export default function Login({ onLogin }: Props) {
             </div>
 
             {/* PIN */}
+
+            {/* SELECTOR DE EMPRESA */}
+            {role !== "superadmin" && role !== "trabajador" && companies.length > 0 && (
+              <div className="login-company mb-4">
+                <label className="login-label">Empresa</label>
+                <select
+                  className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm shadow-sm focus:border-blue-600 focus:outline-none focus:ring-4 focus:ring-blue-600/10"
+                  value={selectedCompanyRut}
+                  onChange={(e) => setSelectedCompanyRut(e.target.value)}
+                >
+                  <option value="">-- Selecciona Empresa --</option>
+                  {companies.map(c => (
+                    <option key={c.id} value={c.rut}>{c.nombreRazonSocial}</option>
+                  ))}
+                </select>
+              </div>
+            )}
+
             <div className="login-pin">
               <label className="login-label">PIN de acceso</label>
               <input

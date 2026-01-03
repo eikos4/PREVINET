@@ -338,6 +338,27 @@ export async function saveSignedIrlPdf(params: {
   };
 
   await db.table("irlSignedPdfs").put(record);
+
+  try {
+    const { createNotification } = await import("../notifications/notifications.service");
+    let companyId: string | null = null;
+    try {
+      const obra = await db.table("obras").get(params.irl.obra);
+      companyId = (obra as any)?.empresaId ?? null;
+    } catch {}
+    await createNotification({
+      type: "irl_signed",
+      title: "IRL firmado",
+      body: `${params.assignment.firmadoPorNombre ?? "Un trabajador"} firmó IRL #${params.irl.id}`,
+      toRole: "prevencionista",
+      companyId,
+      fromUserId: params.assignment.workerId,
+      related: { entity: "irl", id: params.irl.id }
+    });
+  } catch (e) {
+    console.error("No se pudo crear notificación (irl_signed)", e);
+  }
+
   return record;
 }
 
