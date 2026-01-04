@@ -7,6 +7,7 @@ import type { Obra } from "../modules/obras/obras.service";
 import type { Worker } from "../modules/workers/worker.service";
 import type { ART } from "../modules/art/art.service";
 import type { IRL } from "../modules/irl/irl.service";
+import { addToSyncQueue } from "./sync.service";
 
 function todayDate(): string {
   return new Date().toISOString().slice(0, 10);
@@ -311,7 +312,6 @@ export async function loadDemoData(): Promise<void> {
   });
 
   // 🔄 Trigger Cloud Sync immediately for the demo data
-  const { addToSyncQueue } = await import("./sync.service");
   await addToSyncQueue("full_sync");
 }
 

@@ -66,6 +66,7 @@ import {
   isReadOnly,
   isSystemAdmin,
 } from "../modules/auth/permissions";
+import { pullFromSupabase } from "../services/sync.service";
 
 import { APP_MODULES } from "./modules.registry";
 
@@ -106,7 +107,6 @@ export default function App() {
     // 1. Auto-pull from cloud on startup to sync latest users/companies for login
     const triggerPull = async () => {
       try {
-        const { pullFromSupabase } = await import("../services/sync.service");
         await pullFromSupabase();
         // Refresh session just in case something changed
         const u = await getCurrentUser();
