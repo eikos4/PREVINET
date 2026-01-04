@@ -103,17 +103,29 @@ export default function App() {
      LOAD CURRENT USER
      =============================== */
   useEffect(() => {
-    getCurrentUser().then(async (u) => {
+    // 1. Auto-pull from cloud on startup to sync latest users/companies for login
+    const triggerPull = async () => {
+      try {
+        const { pullFromSupabase } = await import("../services/sync.service");
+        await pullFromSupabase();
+        // Refresh session just in case something changed
+        const u = await getCurrentUser();
+        if (u) {
+          setUser(u);
+          setView("app");
+        }
+      } catch (e) {
+        console.error("Critical: Initial sync failed", e);
+      }
+    };
+
+    triggerPull();
+
+    // 2. Load current local session (fastest path)
+    getCurrentUser().then((u) => {
       if (u) {
         setUser(u);
         setView("app");
-        // Auto-pull from cloud on start
-        try {
-          const { pullFromSupabase } = await import("../services/sync.service");
-          pullFromSupabase();
-        } catch (e) {
-          console.error("Auto-pull failed", e);
-        }
       }
     });
   }, []);
