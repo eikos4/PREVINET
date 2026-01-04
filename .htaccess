@@ -1,0 +1,13 @@
+<IfModule mod_rewrite.c>
+  RewriteEngine On
+  RewriteBase /
+  
+  # Si la petición no es para un archivo real en la raíz, busca en /dist/
+  RewriteCond %{REQUEST_URI} !^/dist/
+  RewriteCond %{REQUEST_FILENAME} !-f
+  RewriteCond %{REQUEST_FILENAME} !-d
+  RewriteRule ^(.*)$ dist/$1 [L]
+  
+  # Si entran a la raíz, sirve el index de dist
+  RewriteRule ^$ dist/index.html [L]
+</IfModule>
