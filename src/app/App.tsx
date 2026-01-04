@@ -103,10 +103,17 @@ export default function App() {
      LOAD CURRENT USER
      =============================== */
   useEffect(() => {
-    getCurrentUser().then((u) => {
+    getCurrentUser().then(async (u) => {
       if (u) {
         setUser(u);
         setView("app");
+        // Auto-pull from cloud on start
+        try {
+          const { pullFromSupabase } = await import("../services/sync.service");
+          pullFromSupabase();
+        } catch (e) {
+          console.error("Auto-pull failed", e);
+        }
       }
     });
   }, []);

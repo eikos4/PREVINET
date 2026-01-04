@@ -19,15 +19,34 @@ export type SyncItem = {
   createdAt: Date;
 };
 
+export async function getPendingSyncCount(): Promise<number> {
+  return await db.table("syncQueue").count();
+}
+
+let syncTimer: ReturnType<typeof setTimeout> | null = null;
+
+export function triggerBackgroundSync() {
+  if (typeof window === 'undefined' || !navigator.onLine) return;
+
+  if (syncTimer) clearTimeout(syncTimer);
+
+  syncTimer = setTimeout(async () => {
+    window.dispatchEvent(new CustomEvent('sync:status', { detail: { syncing: true } }));
+    try {
+      await flushSyncQueue();
+    } finally {
+      window.dispatchEvent(new CustomEvent('sync:status', { detail: { syncing: false } }));
+      syncTimer = null;
+    }
+  }, 3000); // 3 seconds debounce
+}
+
 export async function addToSyncQueue(type: SyncItem["type"]) {
   await db.table("syncQueue").add({
     type,
     createdAt: new Date(),
   });
-}
-
-export async function getPendingSyncCount(): Promise<number> {
-  return await db.table("syncQueue").count();
+  triggerBackgroundSync();
 }
 
 export async function flushSyncQueue() {
@@ -303,4 +322,12 @@ export async function pullFromSupabase() {
   }
 
   console.log("✅ Sincronización completa");
+}
+
+if (typeof window !== 'undefined') {
+  window.addEventListener('online', () => {
+    getPendingSyncCount().then(count => {
+      if (count > 0) triggerBackgroundSync();
+    });
+  });
 }
