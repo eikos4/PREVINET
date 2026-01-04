@@ -371,8 +371,10 @@ export default function Dashboard() {
     setDemoMessage("");
     try {
       await loadDemoData();
+      setDemoMessage("Sincronizando con la nube...");
+      await flushSyncQueue();
       await loadStats();
-      setDemoMessage("Datos de demo cargados correctamente");
+      setDemoMessage("Datos de demo cargados y sincronizados correctamente");
     } catch (e) {
       const msg = e instanceof Error ? e.message : "No se pudo cargar la demo";
       setDemoMessage(msg);
