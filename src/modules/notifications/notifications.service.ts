@@ -1,4 +1,5 @@
 import { db } from "../../offline/db";
+import { addToSyncQueue } from "../../services/sync.service";
 
 export type NotificationRecord = {
   id?: number;
@@ -41,6 +42,7 @@ export async function createNotification(params: Partial<NotificationRecord> & {
   const id = await db.table("notifications").add(record as any);
   record.id = id as number;
   emitter.dispatchEvent(new CustomEvent("change", { detail: record }));
+  await addToSyncQueue("notification");
   return record;
 }
 
@@ -72,6 +74,7 @@ export async function markAsRead(id: number) {
   await db.table("notifications").update(id, { read: true });
   const rec = await db.table("notifications").get(id);
   emitter.dispatchEvent(new CustomEvent("change", { detail: rec ?? null }));
+  await addToSyncQueue("notification");
 }
 
 export async function markAllRead(userId?: string, role?: string) {
@@ -79,4 +82,5 @@ export async function markAllRead(userId?: string, role?: string) {
   const unread = all.filter((n) => !n.read).map((n) => n.id).filter(Boolean) as number[];
   await Promise.all(unread.map((id) => db.table("notifications").update(id, { read: true })));
   emitter.dispatchEvent(new CustomEvent("change", { detail: null }));
+  await addToSyncQueue("notification");
 }

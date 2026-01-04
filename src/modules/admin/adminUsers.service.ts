@@ -121,6 +121,7 @@ export async function createManagedUser(input: ManagedUserInput): Promise<User> 
   };
 
   await db.table("users").add(newUser);
+  await addToSyncQueue("user");
   return newUser as User;
 }
 
@@ -246,6 +247,7 @@ export async function updateManagedUser(input: UpdateManagedUserInput): Promise<
   };
 
   await db.table("users").put(updated);
+  await addToSyncQueue("user");
   return updated as User;
 }
 
@@ -268,4 +270,5 @@ export async function deleteManagedUser(id: string): Promise<void> {
     // Let's leave it as is for now, but ensure the UI doesn't show delete button for them.
   }
   await db.table("users").delete(id);
+  await addToSyncQueue("user");
 }

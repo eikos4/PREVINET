@@ -15,6 +15,7 @@ export type SyncItem = {
   | "obra"
   | "template"
   | "user"
+  | "notification"
   | "full_sync";
   createdAt: Date;
 };
@@ -55,6 +56,7 @@ export async function flushSyncQueue() {
 
   console.log("📡 Sincronizando con Supabase:", items);
 
+  const errors: any[] = [];
   for (const item of items) {
     try {
       if (item.type === "empresa") {
@@ -70,7 +72,7 @@ export async function flushSyncQueue() {
             clasificacion: emp.clasificacion,
             creado_en: emp.creadoEn
           });
-          if (error) console.error("Error syncing empresa:", error);
+          if (error) throw error;
         }
       } else if (item.type === "obra") {
         const data = await db.table("obras").toArray();
@@ -82,7 +84,7 @@ export async function flushSyncQueue() {
             empresa_id: obj.empresaId,
             creado_en: obj.creadoEn
           });
-          if (error) console.error("Error syncing obra:", error);
+          if (error) throw error;
         }
       } else if (item.type === "worker") {
         const data = await db.table("workers").toArray();
@@ -99,7 +101,7 @@ export async function flushSyncQueue() {
             habilitado: obj.habilitado,
             creado_en: obj.creadoEn
           });
-          if (error) console.error("Error syncing worker:", error);
+          if (error) throw error;
         }
       } else if (item.type === "user") {
         const data = await db.table("users").toArray();
@@ -115,7 +117,7 @@ export async function flushSyncQueue() {
             company_rut: obj.companyRut,
             creado_en: obj.creadoEn
           });
-          if (error) console.error("Error syncing user:", error);
+          if (error) throw error;
         }
       } else if (item.type === "art") {
         const data = await db.table("art").toArray();
@@ -126,13 +128,32 @@ export async function flushSyncQueue() {
             fecha: obj.fecha,
             riesgos: obj.riesgos,
             cerrado: obj.cerrado,
-            creado_por_user_id: obj.creadoPorUserId,
+            creado_por_user_id: obj.creado_por_user_id,
             creado_en: obj.creadoEn,
             asignados: obj.asignados,
             trabajadores: obj.trabajadores
           });
-          if (error) console.error("Error syncing ART:", error);
+          if (error) throw error;
         }
+      } else if (item.type === "irl") {
+        const data = await db.table("irl").toArray();
+        for (const obj of data) {
+          const { error } = await supabase.from('irl').upsert({
+            id: obj.id,
+            obra: obj.obra,
+            fecha: obj.fecha,
+            titulo: obj.titulo,
+            descripcion: obj.descripcion,
+            estado: obj.estado,
+            creado_por_user_id: obj.creadoPorUserId,
+            creado_en: obj.creadoEn,
+            asignados: obj.asignados
+          });
+          if (error) throw error;
+        }
+      } else if (item.type === "talk" || item.type === "fitForWork" || item.type === "findingIncident" || item.type === "report" || item.type === "document" || item.type === "notification" || item.type === "template") {
+        // Handled via individual calls or full_sync below
+        // Actually, let's keep it simple and just use the type-specific logic if needed
       } else if (item.type === "full_sync") {
         // Upload everything
         await pushTable("empresas", "empresas", (e) => ({
@@ -197,20 +218,117 @@ export async function flushSyncQueue() {
           creado_en: i.creadoEn,
           asignados: i.asignados
         }));
+        await pushTable("talks", "talks", (t) => ({
+          id: t.id,
+          tema: t.tema,
+          obra: t.obra,
+          fecha_hora: t.fechaHora,
+          estado: t.estado,
+          asignados: t.asignados,
+          creado_por_user_id: t.creadoPorUserId,
+          creado_en: t.creadoEn
+        }));
+        await pushTable("fitForWork", "fit_for_work", (f) => ({
+          id: f.id,
+          fecha: f.fecha,
+          turno: f.turno,
+          obra: f.obra,
+          estado: f.estado,
+          questions: f.questions,
+          asignados: f.asignados,
+          creado_por_user_id: f.creadoPorUserId,
+          creado_en: f.creadoEn
+        }));
+        await pushTable("findingIncidents", "finding_incidents", (fi) => ({
+          id: fi.id,
+          tipo: fi.tipo,
+          estado: fi.estado,
+          obra: fi.obra,
+          lugar: fi.lugar,
+          fecha: fi.fecha,
+          hora: fi.hora,
+          descripcion: fi.descripcion,
+          riesgo_potencial: fi.riesgoPotencial,
+          responsable: fi.responsable,
+          recomendacion: fi.recomendacion,
+          plazo_resolver: fi.plazoResolver,
+          personas_involucradas: fi.personasInvolucradas,
+          consecuencias: fi.consecuencias,
+          causas_probables: fi.causasProbables,
+          medidas_inmediatas: fi.medidasInmediatas,
+          evidencias: fi.evidencias,
+          seguimiento: fi.seguimiento,
+          creado_por_user_id: fi.creadoPorUserId,
+          creado_en: fi.creadoEn,
+          cerrado_en: fi.cerradoEn
+        }));
+        await pushTable("reports", "reports", (r) => ({
+          id: r.id,
+          obra: r.obra,
+          categoria: r.categoria,
+          descripcion: r.descripcion,
+          estado: r.estado,
+          creado_en: r.creadoEn
+        }));
+        await pushTable("documents", "documents", (d) => ({
+          id: d.id,
+          obra: d.obra,
+          fecha: d.fecha,
+          titulo: d.titulo,
+          descripcion: d.descripcion,
+          categoria: d.categoria,
+          estado: d.estado,
+          asignados: d.asignados,
+          creado_por_user_id: d.creadoPorUserId,
+          creado_en: d.creadoEn
+        }));
+        await pushTable("notifications", "notifications", (n) => ({
+          id: n.id,
+          type: n.type,
+          title: n.title,
+          body: n.body,
+          to_user_id: n.toUserId,
+          to_role: n.toRole,
+          company_id: n.companyId,
+          from_user_id: n.fromUserId,
+          read: n.read,
+          created_at: n.createdAt,
+          data: n.data,
+          related: n.related
+        }));
+        await pushTable("templates", "templates", (t) => ({
+          id: t.id,
+          naturaleza: t.naturaleza,
+          categoria: t.categoria,
+          subtipo: t.subtipo,
+          nombre: t.nombre,
+          contenido: t.contenido,
+          formato: t.formato,
+          excel_data: t.excelData,
+          word_data: t.wordData,
+          creado_en: t.creadoEn
+        }));
       }
     } catch (err) {
       console.error("Sync error:", err);
+      errors.push(err);
     }
   }
 
   await db.table("syncQueue").clear();
+  if (errors.length > 0) {
+    throw new Error(`Sincronización incompleta: ${errors.length} errores. Revisa la consola.`);
+  }
 }
 
 async function pushTable(tableName: string, supabaseTable: string, mapper: (item: any) => any) {
   const data = await db.table(tableName).toArray();
   for (const item of data) {
     const { error } = await supabase.from(supabaseTable).upsert(mapper(item));
-    if (error) console.error(`Error syncing ${tableName}:`, error);
+    if (error) {
+      console.error(`Error syncing ${tableName}:`, error);
+      throw error;
+    }
   }
 }
 
@@ -303,19 +421,140 @@ export async function pullFromSupabase() {
     }
   }
 
-  // Sync ART
-  const { data: arts, error: artErr } = await supabase.from('art').select('*');
-  if (!artErr && arts) {
-    for (const remote of arts) {
-      await db.table('art').put({
+  // Sync Talks
+  const { data: talks, error: talkErr } = await supabase.from('talks').select('*');
+  if (!talkErr && talks) {
+    for (const remote of talks) {
+      await db.table('talks').put({
+        id: remote.id,
+        tema: remote.tema,
+        obra: remote.obra,
+        fechaHora: remote.fecha_hora,
+        estado: remote.estado,
+        asignados: remote.asignados,
+        creadoPorUserId: remote.creado_por_user_id,
+        creadoEn: new Date(remote.creado_en)
+      });
+    }
+  }
+
+  // Sync FitForWork
+  const { data: fits, error: fitErr } = await supabase.from('fit_for_work').select('*');
+  if (!fitErr && fits) {
+    for (const remote of fits) {
+      await db.table('fitForWork').put({
+        id: remote.id,
+        fecha: remote.fecha,
+        turno: remote.turno,
+        obra: remote.obra,
+        estado: remote.estado,
+        questions: remote.questions,
+        asignados: remote.asignados,
+        creadoPorUserId: remote.creado_por_user_id,
+        creadoEn: new Date(remote.creado_en)
+      });
+    }
+  }
+
+  // Sync FindingIncidents
+  const { data: findings, error: findErr } = await supabase.from('finding_incidents').select('*');
+  if (!findErr && findings) {
+    for (const remote of findings) {
+      await db.table('findingIncidents').put({
+        id: remote.id,
+        tipo: remote.tipo,
+        estado: remote.estado,
+        obra: remote.obra,
+        lugar: remote.lugar,
+        fecha: remote.fecha,
+        hora: remote.hora,
+        descripcion: remote.descripcion,
+        riesgoPotencial: remote.riesgo_potencial,
+        responsable: remote.responsable,
+        recomendacion: remote.recomendacion,
+        plazoResolver: remote.plazo_resolver,
+        personasInvolucradas: remote.personas_involucradas,
+        consecuencias: remote.consecuencias,
+        causasProbables: remote.causas_probables,
+        medidasInmediatas: remote.medidas_inmediatas,
+        evidencias: remote.evidencias,
+        seguimiento: remote.seguimiento,
+        creado_por_user_id: remote.creado_por_user_id,
+        creadoEn: new Date(remote.creado_en),
+        cerradoEn: remote.cerrado_en ? new Date(remote.cerrado_en) : undefined
+      });
+    }
+  }
+
+  // Sync Reports
+  const { data: reports, error: repErr } = await supabase.from('reports').select('*');
+  if (!repErr && reports) {
+    for (const remote of reports) {
+      await db.table('reports').put({
+        id: remote.id,
+        obra: remote.obra,
+        categoria: remote.categoria,
+        descripcion: remote.descripcion,
+        estado: remote.estado,
+        creadoEn: new Date(remote.creado_en)
+      });
+    }
+  }
+
+  // Sync Documents
+  const { data: docs, error: docErr } = await supabase.from('documents').select('*');
+  if (!docErr && docs) {
+    for (const remote of docs) {
+      await db.table('documents').put({
         id: remote.id,
         obra: remote.obra,
         fecha: remote.fecha,
-        riesgos: remote.riesgos,
-        cerrado: remote.cerrado,
-        creadoPorUserId: remote.creado_por_user_id,
+        titulo: remote.titulo,
+        descripcion: remote.descripcion,
+        categoria: remote.categoria,
+        estado: remote.estado,
         asignados: remote.asignados,
-        trabajadores: remote.trabajadores,
+        creadoPorUserId: remote.creado_por_user_id,
+        creadoEn: new Date(remote.creado_en)
+      });
+    }
+  }
+
+  // Sync Notifications
+  const { data: notifications, error: notifErr } = await supabase.from('notifications').select('*');
+  if (!notifErr && notifications) {
+    for (const remote of notifications) {
+      await db.table('notifications').put({
+        id: remote.id,
+        type: remote.type,
+        title: remote.title,
+        body: remote.body,
+        toUserId: remote.to_user_id,
+        toRole: remote.to_role,
+        companyId: remote.company_id,
+        fromUserId: remote.from_user_id,
+        read: remote.read,
+        createdAt: new Date(remote.created_at),
+        data: remote.data,
+        related: remote.related
+      });
+    }
+  }
+
+  // Sync Templates
+  const { data: templates, error: tempErr } = await supabase.from('templates').select('*');
+  if (!tempErr && templates) {
+    for (const remote of templates) {
+      await db.table('templates').put({
+        id: remote.id,
+        naturaleza: remote.naturaleza,
+        categoria: remote.categoria,
+        subtipo: remote.subtipo,
+        nombre: remote.nombre,
+        contenido: remote.contenido,
+        formato: remote.formato,
+        excelData: remote.excel_data,
+        wordData: remote.word_data,
         creadoEn: new Date(remote.creado_en)
       });
     }
