@@ -1,13 +1,29 @@
+# Configuración para LiteSpeed / Apache para SPA (Vite)
 <IfModule mod_rewrite.c>
   RewriteEngine On
   RewriteBase /
   
-  # Si la petición no es para un archivo real en la raíz, busca en /dist/
-  RewriteCond %{REQUEST_URI} !^/dist/
+  # Asegurar que se sirvan los tipos MIME correctos
+  AddType application/manifest+json .webmanifest
+  AddType application/javascript .js
+  AddType image/png .png
+  AddType image/gif .gif
+  AddType image/svg+xml .svg
+
+  # Si la petición es para la raíz, servir dist/index.html
+  RewriteRule ^$ dist/index.html [L]
+
+  # Si el archivo NO existe en la carpeta raíz...
   RewriteCond %{REQUEST_FILENAME} !-f
   RewriteCond %{REQUEST_FILENAME} !-d
+  
+  # Y el archivo SI existe dentro de /dist/
+  RewriteCond %{DOCUMENT_ROOT}/dist/$1 -f [OR]
+  RewriteCond %{DOCUMENT_ROOT}/dist/$1 -d
   RewriteRule ^(.*)$ dist/$1 [L]
   
-  # Si entran a la raíz, sirve el index de dist
-  RewriteRule ^$ dist/index.html [L]
+  # Fallback para rutas de la SPA (React Router): todo a dist/index.html
+  RewriteCond %{REQUEST_FILENAME} !-f
+  RewriteCond %{REQUEST_FILENAME} !-d
+  RewriteRule ^(.*)$ dist/index.html [L]
 </IfModule>
