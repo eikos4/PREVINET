@@ -334,12 +334,9 @@ async function pushTable(tableName: string, supabaseTable: string, mapper: (item
 
 export async function pullFromSupabase() {
   console.log("📥 Descargando datos desde Supabase...");
-
-  // Sync Empresas
-  const { data: empresas, error: empErr } = await supabase.from('empresas').select('*');
-  if (!empErr && empresas) {
-    for (const remote of empresas) {
-      await db.table('empresas').put({
+  const tables = [
+    {
+      name: 'empresas', supabaseName: 'empresas', mapper: (remote: any) => ({
         id: remote.id,
         nombreRazonSocial: remote.nombre_razon_social,
         rut: remote.rut,
@@ -348,29 +345,19 @@ export async function pullFromSupabase() {
         estado: remote.estado,
         clasificacion: remote.clasificacion,
         creadoEn: new Date(remote.creado_en)
-      });
-    }
-  }
-
-  // Sync Obras
-  const { data: obras, error: obrErr } = await supabase.from('obras').select('*');
-  if (!obrErr && obras) {
-    for (const remote of obras) {
-      await db.table('obras').put({
+      })
+    },
+    {
+      name: 'obras', supabaseName: 'obras', mapper: (remote: any) => ({
         id: remote.id,
         nombre: remote.nombre,
         estado: remote.estado,
         empresaId: remote.empresa_id,
         creadoEn: new Date(remote.creado_en)
-      });
-    }
-  }
-
-  // Sync Workers
-  const { data: workers, error: worErr } = await supabase.from('workers').select('*');
-  if (!worErr && workers) {
-    for (const remote of workers) {
-      await db.table('workers').put({
+      })
+    },
+    {
+      name: 'workers', supabaseName: 'workers', mapper: (remote: any) => ({
         id: remote.id,
         nombre: remote.nombre,
         rut: remote.rut,
@@ -381,15 +368,10 @@ export async function pullFromSupabase() {
         pin: remote.pin,
         habilitado: remote.habilitado,
         creadoEn: new Date(remote.creado_en)
-      });
-    }
-  }
-
-  // Sync Users
-  const { data: users, error: usrErr } = await supabase.from('users').select('*');
-  if (!usrErr && users) {
-    for (const remote of users) {
-      await db.table('users').put({
+      })
+    },
+    {
+      name: 'users', supabaseName: 'users', mapper: (remote: any) => ({
         id: remote.id,
         name: remote.name,
         pin: remote.pin,
@@ -399,15 +381,10 @@ export async function pullFromSupabase() {
         companyName: remote.company_name,
         companyRut: remote.company_rut,
         creadoEn: new Date(remote.creado_en)
-      });
-    }
-  }
-
-  // Sync IRL
-  const { data: irls, error: irlErr } = await supabase.from('irl').select('*');
-  if (!irlErr && irls) {
-    for (const remote of irls) {
-      await db.table('irl').put({
+      })
+    },
+    {
+      name: 'irl', supabaseName: 'irl', mapper: (remote: any) => ({
         id: remote.id,
         obra: remote.obra,
         fecha: remote.fecha,
@@ -417,15 +394,10 @@ export async function pullFromSupabase() {
         creadoPorUserId: remote.creado_por_user_id,
         asignados: remote.asignados,
         creadoEn: new Date(remote.creado_en)
-      });
-    }
-  }
-
-  // Sync Talks
-  const { data: talks, error: talkErr } = await supabase.from('talks').select('*');
-  if (!talkErr && talks) {
-    for (const remote of talks) {
-      await db.table('talks').put({
+      })
+    },
+    {
+      name: 'talks', supabaseName: 'talks', mapper: (remote: any) => ({
         id: remote.id,
         tema: remote.tema,
         obra: remote.obra,
@@ -434,15 +406,10 @@ export async function pullFromSupabase() {
         asignados: remote.asignados,
         creadoPorUserId: remote.creado_por_user_id,
         creadoEn: new Date(remote.creado_en)
-      });
-    }
-  }
-
-  // Sync FitForWork
-  const { data: fits, error: fitErr } = await supabase.from('fit_for_work').select('*');
-  if (!fitErr && fits) {
-    for (const remote of fits) {
-      await db.table('fitForWork').put({
+      })
+    },
+    {
+      name: 'fitForWork', supabaseName: 'fit_for_work', mapper: (remote: any) => ({
         id: remote.id,
         fecha: remote.fecha,
         turno: remote.turno,
@@ -452,15 +419,10 @@ export async function pullFromSupabase() {
         asignados: remote.asignados,
         creadoPorUserId: remote.creado_por_user_id,
         creadoEn: new Date(remote.creado_en)
-      });
-    }
-  }
-
-  // Sync FindingIncidents
-  const { data: findings, error: findErr } = await supabase.from('finding_incidents').select('*');
-  if (!findErr && findings) {
-    for (const remote of findings) {
-      await db.table('findingIncidents').put({
+      })
+    },
+    {
+      name: 'findingIncidents', supabaseName: 'finding_incidents', mapper: (remote: any) => ({
         id: remote.id,
         tipo: remote.tipo,
         estado: remote.estado,
@@ -482,30 +444,20 @@ export async function pullFromSupabase() {
         creado_por_user_id: remote.creado_por_user_id,
         creadoEn: new Date(remote.creado_en),
         cerradoEn: remote.cerrado_en ? new Date(remote.cerrado_en) : undefined
-      });
-    }
-  }
-
-  // Sync Reports
-  const { data: reports, error: repErr } = await supabase.from('reports').select('*');
-  if (!repErr && reports) {
-    for (const remote of reports) {
-      await db.table('reports').put({
+      })
+    },
+    {
+      name: 'reports', supabaseName: 'reports', mapper: (remote: any) => ({
         id: remote.id,
         obra: remote.obra,
         categoria: remote.categoria,
         descripcion: remote.descripcion,
         estado: remote.estado,
         creadoEn: new Date(remote.creado_en)
-      });
-    }
-  }
-
-  // Sync Documents
-  const { data: docs, error: docErr } = await supabase.from('documents').select('*');
-  if (!docErr && docs) {
-    for (const remote of docs) {
-      await db.table('documents').put({
+      })
+    },
+    {
+      name: 'documents', supabaseName: 'documents', mapper: (remote: any) => ({
         id: remote.id,
         obra: remote.obra,
         fecha: remote.fecha,
@@ -516,15 +468,10 @@ export async function pullFromSupabase() {
         asignados: remote.asignados,
         creadoPorUserId: remote.creado_por_user_id,
         creadoEn: new Date(remote.creado_en)
-      });
-    }
-  }
-
-  // Sync Notifications
-  const { data: notifications, error: notifErr } = await supabase.from('notifications').select('*');
-  if (!notifErr && notifications) {
-    for (const remote of notifications) {
-      await db.table('notifications').put({
+      })
+    },
+    {
+      name: 'notifications', supabaseName: 'notifications', mapper: (remote: any) => ({
         id: remote.id,
         type: remote.type,
         title: remote.title,
@@ -537,15 +484,10 @@ export async function pullFromSupabase() {
         createdAt: new Date(remote.created_at),
         data: remote.data,
         related: remote.related
-      });
-    }
-  }
-
-  // Sync Templates
-  const { data: templates, error: tempErr } = await supabase.from('templates').select('*');
-  if (!tempErr && templates) {
-    for (const remote of templates) {
-      await db.table('templates').put({
+      })
+    },
+    {
+      name: 'templates', supabaseName: 'templates', mapper: (remote: any) => ({
         id: remote.id,
         naturaleza: remote.naturaleza,
         categoria: remote.categoria,
@@ -556,7 +498,20 @@ export async function pullFromSupabase() {
         excelData: remote.excel_data,
         wordData: remote.word_data,
         creadoEn: new Date(remote.creado_en)
-      });
+      })
+    }
+  ];
+
+  for (const table of tables) {
+    const { data, error } = await supabase.from(table.supabaseName).select('*');
+    if (error) {
+      console.error(`Error downloading ${table.name}:`, error);
+      throw error;
+    }
+    if (data) {
+      for (const remote of data) {
+        await db.table(table.name).put(table.mapper(remote));
+      }
     }
   }
 
