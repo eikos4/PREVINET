@@ -60,32 +60,38 @@ export default function InstallBanner() {
     }
   };
 
-  if (installed) return null;
+  if (installed || !visible) return null;
 
-  if (isIos() && !isInStandaloneMode()) {
-    return visible ? (
-      <div className="install-banner" style={{position: 'fixed', bottom: 10, left: 10, right: 10, background: '#fff', padding: 12, borderRadius: 8, boxShadow: '0 4px 12px rgba(0,0,0,.15)', zIndex: 9999}}>
-        <div style={{display: 'flex', justifyContent: 'space-between', alignItems: 'center'}}>
-          <div style={{fontSize: 14}}>
-            Para instalar en iOS: pulsa <strong>Compartir → Añadir a pantalla de inicio</strong>
+  return (
+    <div className="install-banner-wrapper">
+      <div className="install-banner-card">
+        <div className="install-banner-content">
+          <div className="install-banner-icon">
+            <img src="/logo.png" alt="App Icon" />
           </div>
-          <div>
-            <button className="btn" onClick={() => setVisible(false)} style={{marginLeft: 8}}>Cerrar</button>
+          <div className="install-banner-text">
+            {isIos() && !isInStandaloneMode() ? (
+              <>
+                <div className="install-banner-title">Instala PreviNet</div>
+                <div className="install-banner-subtitle">
+                  Pulsa <span>Compartir</span> y luego <span>Añadir a pantalla de inicio</span>.
+                </div>
+              </>
+            ) : (
+              <>
+                <div className="install-banner-title">PreviNet en tu pantalla</div>
+                <div className="install-banner-subtitle">Acceso rápido y mejor experiencia sin conexión.</div>
+              </>
+            )}
           </div>
         </div>
-      </div>
-    ) : null;
-  }
-
-  return visible ? (
-    <div className="install-banner" style={{position: 'fixed', bottom: 10, left: 10, right: 10, background: '#fff', padding: 12, borderRadius: 8, boxShadow: '0 4px 12px rgba(0,0,0,.15)', zIndex: 9999}}>
-      <div style={{display: 'flex', justifyContent: 'space-between', alignItems: 'center'}}>
-        <div style={{fontSize: 14}}>¿Quieres instalar la app?</div>
-        <div>
-          <button className="btn-primary" onClick={promptInstall}>Instalar</button>
-          <button className="btn" onClick={() => setVisible(false)} style={{marginLeft: 8}}>Cerrar</button>
+        <div className="install-banner-actions">
+          {(!isIos() || isInStandaloneMode()) && (
+            <button className="btn-install-primary" onClick={promptInstall}>Instalar</button>
+          )}
+          <button className="btn-install-secondary" onClick={() => setVisible(false)}>Ahora no</button>
         </div>
       </div>
     </div>
-  ) : null;
+  );
 }

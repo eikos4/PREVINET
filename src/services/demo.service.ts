@@ -5,18 +5,11 @@ import { normalizeRole } from "../modules/auth/auth.service";
 import type { Empresa } from "../modules/empresas/empresas.service";
 import type { Obra } from "../modules/obras/obras.service";
 import type { Worker } from "../modules/workers/worker.service";
-import type { ART, ARTWorkerAssignment } from "../modules/art/art.service";
-import type { IRL, IRLWorkerAssignment } from "../modules/irl/irl.service";
-import type { Talk, TalkWorkerAssignment } from "../modules/talks/talk.service";
-import type { DocumentRecord, DocumentWorkerAssignment } from "../modules/documents/documents.service";
-import type { FitForWork, FitForWorkQuestion, FitForWorkWorkerAssignment } from "../modules/fitForWork/fitForWork.service";
+import type { ART } from "../modules/art/art.service";
+import type { IRL } from "../modules/irl/irl.service";
 
 function todayDate(): string {
   return new Date().toISOString().slice(0, 10);
-}
-
-function nowIso(): string {
-  return new Date().toISOString();
 }
 
 function existingStoreSet() {
@@ -48,7 +41,7 @@ async function runTxn<T>(names: string[], fn: (has: (n: string) => boolean) => P
 
 export async function loadDemoData(): Promise<void> {
   // Garantiza apertura/upgrade del schema antes de transaccionar
-  try { await db.open(); } catch {}
+  try { await db.open(); } catch { }
   const CURRENT_USER_KEY = "currentUserId";
   const currentUserId = localStorage.getItem(CURRENT_USER_KEY);
   const currentUser = currentUserId
@@ -74,247 +67,256 @@ export async function loadDemoData(): Promise<void> {
     await db.table("users").put(currentUser);
   }
 
-  // ===== Inserción de datos DEMO =====
-  // 1) Empresa, Obra, Usuarios base, Trabajadores
-  await runTxn(["empresas", "obras", "users", "workers"], async (has) => {
-    const empresaNombre = "Empresa Demo SpA";
-    const empresaRut = "76123456-5";
-    const obraNombre = "Obra Demo Central";
+  // ===== Inserción de datos DEMO: Empresa A (Norte) =====
+  await runTxn(["empresas", "obras", "users", "workers", "art", "irl", "talks", "documents", "fitForWork"], async (has) => {
+    // 1. Empresa y Obra A
+    const empIdA = "demo-empresa-A";
+    const empNombreA = "Constructora Norte SpA";
+    const empRutA = "76111111-1";
 
     if (has("empresas")) {
-      const empresa: Empresa = {
-        id: "demo-empresa-1",
-        nombreRazonSocial: empresaNombre,
-        rut: empresaRut,
+      await db.table<Empresa>("empresas").put({
+        id: empIdA,
+        nombreRazonSocial: empNombreA,
+        rut: empRutA,
         tipo: "mandante",
-        giro: "Construcción",
+        giro: "Construcción Civil",
         estado: "activa",
         creadoEn: new Date(),
-      };
-      await db.table("empresas").put(empresa);
+      });
     }
 
+    const obraIdA = "demo-obra-A";
+    const obraNombreA = "Edificio Central";
     if (has("obras")) {
-      const obra: Obra = {
-        id: "demo-obra-1",
-        nombre: obraNombre,
+      await db.table<Obra>("obras").put({
+        id: obraIdA,
+        nombre: obraNombreA,
         estado: "activa",
         creadoEn: new Date(),
-        // Asociar la obra a la empresa demo
-        empresaId: "demo-empresa-1",
-      };
-      await db.table("obras").put(obra);
+        empresaId: empIdA,
+      });
+    }
+
+    // 2. Usuarios y Trabajadores A
+    const prevIdA = "demo-prev-A";
+    if (has("users")) {
+      await db.table<User>("users").put({
+        id: prevIdA,
+        name: "Prevencionista Norte",
+        pin: "4001",
+        role: "prevencionista",
+        companyName: empNombreA,
+        companyRut: empRutA,
+        companyId: empIdA,
+        creadoEn: new Date(),
+      });
+    }
+
+    const w1Id = "demo-worker-A1";
+    const w2Id = "demo-worker-A2";
+
+    if (has("workers")) {
+      await db.table<Worker>("workers").bulkPut([
+        {
+          id: w1Id,
+          creadoEn: new Date(),
+          nombre: "Juan Pérez (Norte)",
+          rut: "10111111-1",
+          cargo: "Maestro Mayor",
+          obra: obraNombreA,
+          empresaNombre: empNombreA,
+          empresaRut: empRutA,
+          telefono: "+56 9 1111 0001",
+          pin: "5001",
+          habilitado: true,
+        },
+        {
+          id: w2Id,
+          creadoEn: new Date(),
+          nombre: "Pedro González (Norte)",
+          rut: "10222222-2",
+          cargo: "Jornal",
+          obra: obraNombreA,
+          empresaNombre: empNombreA,
+          empresaRut: empRutA,
+          telefono: "+56 9 1111 0002",
+          pin: "5002",
+          habilitado: true,
+        }
+      ]);
     }
 
     if (has("users")) {
-      const prevencionista: User = {
-        id: "demo-prevencionista-1",
-        name: "Prevencionista Demo",
-        pin: "4001",
-        role: "prevencionista",
-        companyName: empresaNombre,
-        companyRut: empresaRut,
-        companyId: "demo-empresa-1",
-        creadoEn: new Date(),
-        nombre: "Juan Pérez", // Demo worker
-        rut: "11111111-1",
-        cargo: "Maestro",
-        obra: obraNombre,
-        empresaNombre,
-        empresaRut,
-        telefono: "+56 9 1111 1111",
-        pin: "5001",
-        habilitado: true,
-      };
-      const worker2: Worker = {
-        id: "demo-worker-2",
-        creadoEn: new Date(),
-        nombre: "María López", // Demo worker
-        rut: "22222222-2",
-        cargo: "Ayudante",
-        obra: obraNombre,
-        empresaNombre,
-        empresaRut,
-        telefono: "+56 9 2222 2222",
-        pin: "5002",
-        habilitado: true,
-      };
-      await db.table("workers").bulkPut([worker1, worker2]);
-
-      if (has("users")) {
-        const userW1: User = {
-          id: "demo-user-worker-1",
-          name: worker1.nombre,
-          pin: worker1.pin,
+      await db.table<User>("users").bulkPut([
+        {
+          id: "user-wA1",
+          name: "Juan Pérez (Norte)",
+          pin: "5001",
           role: "trabajador",
-          workerId: worker1.id,
-          companyId: "demo-empresa-1",
+          workerId: w1Id,
+          companyId: empIdA,
           creadoEn: new Date(),
-        };
-        const userW2: User = {
-          id: "demo-user-worker-2",
-          name: worker2.nombre,
-          pin: worker2.pin,
-          role: "trabajador",
-          workerId: worker2.id,
-          companyId: "demo-empresa-1",
-          creadoEn: new Date(),
-        };
-        await db.table("users").bulkPut([userW1, userW2]);
-      }
-    }
-  });
-
-  // 2) ART e IRL
-  await runTxn(["art", "irl", "users", "workers"], async (has) => {
-    const obraNombre = "Obra Demo Central";
-    const prevencionista = has("users")
-      ? ((await db.table<User>("users").get("demo-prevencionista-1")) as User | undefined)
-      : undefined;
-    const worker1 = has("workers")
-      ? ((await db.table<Worker>("workers").get("demo-worker-1")) as Worker | undefined)
-      : undefined;
-    const worker2 = has("workers")
-      ? ((await db.table<Worker>("workers").get("demo-worker-2")) as Worker | undefined)
-      : undefined;
-
-    if (has("art")) {
-      const artAsignados: ARTWorkerAssignment[] = [
-        ...(worker1 ? [{ workerId: worker1.id, token: "tok-art-w1" }] : []),
-        ...(worker2 ? [{ workerId: worker2.id, token: "tok-art-w2" }] : []),
-      ];
-      const art: ART = {
-        id: "demo-art-1",
-        obra: obraNombre,
-        fecha: todayDate(),
-        trabajadores: [worker1?.id, worker2?.id].filter(Boolean) as string[],
-        asignados: artAsignados,
-        riesgos: "Trabajo en altura, uso de arnés",
-        cerrado: false,
-        creadoPorUserId: prevencionista?.id,
-        creadoEn: new Date(),
-      };
-      await db.table("art").put(art);
-    }
-
-    if (has("irl")) {
-      const irlAsignados: IRLWorkerAssignment[] = [
-        ...(worker1 ? [{ workerId: worker1.id, token: "tok-irl-w1" }] : []),
-        ...(worker2 ? [{ workerId: worker2.id, token: "tok-irl-w2" }] : []),
-      ];
-      const irl: IRL = {
-        id: "demo-irl-1",
-        obra: obraNombre,
-        fecha: todayDate(),
-        titulo: "IRL - Instrucciones de Seguridad Demo",
-        descripcion: "Indicaciones básicas de seguridad para la faena demo.",
-        estado: "PUBLICADO",
-        asignados: irlAsignados,
-        creadoPorUserId: prevencionista?.id,
-        creadoEn: new Date(),
-      };
-      await db.table("irl").put(irl);
-    }
-  });
-
-  // 3) Charlas y Documentos
-  await runTxn(["talks", "documents", "users", "workers"], async (has) => {
-    const obraNombre = "Obra Demo Central";
-    const prevencionista = has("users")
-      ? ((await db.table<User>("users").get("demo-prevencionista-1")) as User | undefined)
-      : undefined;
-    const worker1 = has("workers")
-      ? ((await db.table<Worker>("workers").get("demo-worker-1")) as Worker | undefined)
-      : undefined;
-    const worker2 = has("workers")
-      ? ((await db.table<Worker>("workers").get("demo-worker-2")) as Worker | undefined)
-      : undefined;
-
-    if (has("talks")) {
-      const talkAsignados: TalkWorkerAssignment[] = [
-        ...(worker1 ? [{ workerId: worker1.id, token: "tok-talk-w1" }] : []),
-        ...(worker2 ? [{ workerId: worker2.id, token: "tok-talk-w2" }] : []),
-      ];
-      const talk: Talk = {
-        id: "demo-talk-1",
-        tema: "Uso de EPP y orden",
-        obra: obraNombre,
-        fechaHora: nowIso(),
-        estado: "PUBLICADO",
-        asignados: talkAsignados,
-        creadoPorUserId: prevencionista?.id,
-        creadoEn: new Date(),
-      };
-      await db.table("talks").put(talk);
-    }
-
-    if (has("documents")) {
-      const docAsignados: DocumentWorkerAssignment[] = [
-        ...(worker1 ? [{ workerId: worker1.id, token: "tok-doc-w1" }] : []),
-      ];
-      const document: DocumentRecord = {
-        id: "demo-doc-1",
-        obra: obraNombre,
-        fecha: todayDate(),
-        titulo: "Reglamento Interno Demo",
-        descripcion: "Documento de referencia para la obra demo.",
-        categoria: "Reglamento",
-        estado: "PUBLICADO",
-        asignados: docAsignados,
-        attachment: {
-          fileName: "reglamento_demo.txt",
-          mimeType: "text/plain",
-          blob: new Blob(["Documento de demo"], { type: "text/plain" }),
         },
-        creadoPorUserId: prevencionista?.id,
+        {
+          id: "user-wA2",
+          name: "Pedro González (Norte)",
+          pin: "5002",
+          role: "trabajador",
+          workerId: w2Id,
+          companyId: empIdA,
+          creadoEn: new Date(),
+        }
+      ]);
+    }
+
+    // 3. Recursos (ART, IRL, Chats) A
+    if (has("art")) {
+      await db.table<ART>("art").put({
+        id: "demo-art-A1",
+        obra: obraNombreA,
+        fecha: todayDate(),
+        trabajadores: [w1Id, w2Id],
+        asignados: [
+          { workerId: w1Id, token: "tok-art-A1" },
+          { workerId: w2Id, token: "tok-art-A2" },
+        ],
+        riesgos: "Caída a distinto nivel (Norte)",
+        cerrado: false,
+        creadoPorUserId: prevIdA,
         creadoEn: new Date(),
-      };
-      await db.table("documents").put(document);
+      });
     }
   });
 
-  // 4) Fit-for-Work
-  await runTxn(["fitForWork", "users", "workers"], async (has) => {
-    if (!has("fitForWork")) return;
-    const obraNombre = "Obra Demo Central";
-    const prevencionista = (await db.table<User>("users").get("demo-prevencionista-1")) as
-      | User
-      | undefined;
-    const worker1 = (await db.table<Worker>("workers").get("demo-worker-1")) as
-      | Worker
-      | undefined;
-    const worker2 = (await db.table<Worker>("workers").get("demo-worker-2")) as
-      | Worker
-      | undefined;
+  // ===== Inserción de datos DEMO: Empresa B (Sur) =====
+  await runTxn(["empresas", "obras", "users", "workers", "art", "irl", "talks", "documents", "fitForWork"], async (has) => {
+    // 1. Empresa y Obra B
+    const empIdB = "demo-empresa-B";
+    const empNombreB = "Ingeniería Sur Ltda";
+    const empRutB = "76222222-2";
 
-    const fQuestions: FitForWorkQuestion[] = [
-      { id: "q1", question: "¿Te sientes en buen estado de salud?" },
-      { id: "q2", question: "¿Has descansado adecuadamente (mínimo 6 horas)?" },
-      { id: "q3", question: "¿Estás libre de alcohol y drogas?" },
-      { id: "q4", question: "¿Estás libre de lesiones o dolores?" },
-      { id: "q5", question: "¿Estás mentalmente preparado para trabajar?" },
-    ];
-    const fitAsignados: FitForWorkWorkerAssignment[] = [
-      ...(worker1 ? [{ workerId: worker1.id, token: "tok-fit-w1" }] : []),
-      ...(worker2 ? [{ workerId: worker2.id, token: "tok-fit-w2" }] : []),
-    ];
-    const fit: FitForWork = {
-      id: "demo-fit-1",
-      fecha: todayDate(),
-      turno: "mañana",
-      obra: obraNombre,
-      estado: "PUBLICADO",
-      questions: fQuestions,
-      asignados: fitAsignados,
-      creadoPorUserId: prevencionista?.id,
-      creadoEn: new Date(),
-    };
-    await db.table("fitForWork").put(fit);
+    if (has("empresas")) {
+      await db.table<Empresa>("empresas").put({
+        id: empIdB,
+        nombreRazonSocial: empNombreB,
+        rut: empRutB,
+        tipo: "subcontratista",
+        giro: "Montaje Industrial",
+        estado: "activa",
+        creadoEn: new Date(),
+      });
+    }
+
+    const obraIdB = "demo-obra-B";
+    const obraNombreB = "Planta Solar Sur";
+    if (has("obras")) {
+      await db.table<Obra>("obras").put({
+        id: obraIdB,
+        nombre: obraNombreB,
+        estado: "activa",
+        creadoEn: new Date(),
+        empresaId: empIdB,
+      });
+    }
+
+    // 2. Usuarios y Trabajadores B
+    const prevIdB = "demo-prev-B";
+    if (has("users")) {
+      await db.table<User>("users").put({
+        id: prevIdB,
+        name: "Prevencionista Sur",
+        pin: "4002",
+        role: "prevencionista",
+        companyName: empNombreB,
+        companyRut: empRutB,
+        companyId: empIdB,
+        creadoEn: new Date(),
+      });
+    }
+
+    const w1Id = "demo-worker-B1";
+    const w2Id = "demo-worker-B2";
+
+    if (has("workers")) {
+      await db.table<Worker>("workers").bulkPut([
+        {
+          id: w1Id,
+          creadoEn: new Date(),
+          nombre: "Ana Silva (Sur)",
+          rut: "20111111-1",
+          cargo: "Soldador",
+          obra: obraNombreB,
+          empresaNombre: empNombreB,
+          empresaRut: empRutB,
+          telefono: "+56 9 2222 0001",
+          pin: "6001",
+          habilitado: true,
+        },
+        {
+          id: w2Id,
+          creadoEn: new Date(),
+          nombre: "Carlos Ruiz (Sur)",
+          rut: "20222222-2",
+          cargo: "Eléctrico",
+          obra: obraNombreB,
+          empresaNombre: empNombreB,
+          empresaRut: empRutB,
+          telefono: "+56 9 2222 0002",
+          pin: "6002",
+          habilitado: true,
+        }
+      ]);
+    }
+
+    if (has("users")) {
+      await db.table<User>("users").bulkPut([
+        {
+          id: "user-wB1",
+          name: "Ana Silva (Sur)",
+          pin: "6001",
+          role: "trabajador",
+          workerId: w1Id,
+          companyId: empIdB,
+          creadoEn: new Date(),
+        },
+        {
+          id: "user-wB2",
+          name: "Carlos Ruiz (Sur)",
+          pin: "6002",
+          role: "trabajador",
+          workerId: w2Id,
+          companyId: empIdB,
+          creadoEn: new Date(),
+        }
+      ]);
+    }
+
+    // 3. Recursos (ART, IRL, Chats) B
+    if (has("irl")) {
+      await db.table<IRL>("irl").put({
+        id: "demo-irl-B1",
+        obra: obraNombreB,
+        fecha: todayDate(),
+        titulo: "Protocolo Eléctrico (Sur)",
+        descripcion: "Normas de seguridad para trabajos en alta tensión",
+        estado: "PUBLICADO",
+        asignados: [
+          { workerId: w2Id, token: "tok-irl-B2" } // Solo al electrico
+        ],
+        creadoPorUserId: prevIdB,
+        creadoEn: new Date(),
+      });
+    }
   });
+
+  // 🔄 Trigger Cloud Sync immediately for the demo data
+  const { addToSyncQueue } = await import("./sync.service");
+  await addToSyncQueue("full_sync");
 }
 
 export async function resetDemoData(): Promise<void> {
-  try { await db.open(); } catch {}
+  try { await db.open(); } catch { }
   // Borrar todo y cerrar sesión en grupos (solo stores existentes)
   await clearStores(["users", "workers", "empresas", "obras", "templates"]);
   await clearStores(["art", "reports", "irl", "talks", "fitForWork"]);

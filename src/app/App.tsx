@@ -408,13 +408,13 @@ export default function App() {
         <div className="sidebar-header">
           <div className="sidebar-brand">PreviNet</div>
           <div className="sidebar-meta">
-            <div style={{display: 'flex', alignItems: 'center', justifyContent: 'space-between'}}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
               <div>
                 <div className="sidebar-role">{roleLabel(role)}</div>
                 {user.name && <div className="sidebar-user">{user.name}</div>}
               </div>
-              <div style={{marginLeft: 8}}>
-                <NotificationsBell />
+              <div style={{ marginLeft: 8 }}>
+                {/* Bell moved to TopBar */}
               </div>
             </div>
           </div>
@@ -490,7 +490,10 @@ export default function App() {
             )}
           </div>
 
-          <OnlineStatus />
+          <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+            <NotificationsBell />
+            <OnlineStatus />
+          </div>
         </div>
 
         {/* SECTIONS */}

@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { db } from "../../offline/db";
 import { getCurrentUser, normalizeRole } from "../auth/auth.service";
 import { loadDemoData, resetDemoData } from "../../services/demo.service";
+import { flushSyncQueue, pullFromSupabase, getPendingSyncCount } from "../../services/sync.service";
 
 type Stats = {
   workers: number;
@@ -347,6 +348,16 @@ export default function Dashboard() {
   const [isSuperadmin, setIsSuperadmin] = useState(false);
   const [demoBusy, setDemoBusy] = useState(false);
   const [demoMessage, setDemoMessage] = useState("");
+  const [syncBusy, setSyncBusy] = useState(false);
+  const [pendingSync, setPendingSync] = useState(0);
+
+  useEffect(() => {
+    getPendingSyncCount().then(setPendingSync);
+    const interval = setInterval(() => {
+      getPendingSyncCount().then(setPendingSync);
+    }, 5000);
+    return () => clearInterval(interval);
+  }, []);
 
   useEffect(() => {
     getCurrentUser().then((u) => {
@@ -385,6 +396,35 @@ export default function Dashboard() {
     }
   };
 
+  const handleSyncCloud = async () => {
+    setSyncBusy(true);
+    setDemoMessage("Sincronizando con Supabase...");
+    try {
+      await flushSyncQueue();
+      await loadStats();
+      setDemoMessage("Sincronización exitosa");
+    } catch (e) {
+      setDemoMessage("Error en sincronización");
+    } finally {
+      setSyncBusy(false);
+    }
+  };
+
+  const handlePullCloud = async () => {
+    if (!window.confirm("¿Descargar datos de la nube? Esto podría sobrescribir cambios locales.")) return;
+    setSyncBusy(true);
+    setDemoMessage("Descargando desde la nube...");
+    try {
+      await pullFromSupabase();
+      await loadStats();
+      setDemoMessage("Datos descargados correctamente");
+    } catch (e) {
+      setDemoMessage("Error al descargar datos");
+    } finally {
+      setSyncBusy(false);
+    }
+  };
+
   const pendingIRL = Math.max(0, stats.irlAsignaciones - stats.irlFirmadas);
   const pendingTalks = Math.max(0, stats.talkAsignaciones - stats.talkFirmadas);
   const pendingFit = Math.max(0, stats.fitAsignacionesHoy - stats.fitFirmadasHoy);
@@ -402,25 +442,47 @@ export default function Dashboard() {
           </p>
         </div>
 
-      {isSuperadmin && (
-        <div className="dashboard-pro-panel">
-          <div className="dashboard-pro-panel-header">
-            <div>
-              <div className="dashboard-pro-panel-title">Datos de demo</div>
-              <div className="dashboard-pro-panel-subtitle">Generar o limpiar datos locales de demostración</div>
+        {isSuperadmin && (
+          <div className="dashboard-pro-panel">
+            <div className="dashboard-pro-panel-header">
+              <div>
+                <div className="dashboard-pro-panel-title">Datos de demo</div>
+                <div className="dashboard-pro-panel-subtitle">Generar o limpiar datos locales de demostración</div>
+              </div>
+              <div className="flex items-center gap-2">
+                <button type="button" className="btn-secondary" onClick={handleLoadDemo} disabled={demoBusy}>
+                  Cargar datos de demo
+                </button>
+                <button type="button" className="btn-secondary" onClick={handleResetDemo} disabled={demoBusy || syncBusy}>
+                  Reset demo
+                </button>
+                <div style={{ width: 1, height: 24, background: '#eee', margin: '0 8px' }} />
+                <button
+                  type="button"
+                  className="btn-primary"
+                  onClick={handleSyncCloud}
+                  disabled={demoBusy || syncBusy}
+                  style={{ position: 'relative' }}
+                >
+                  Sincronizar Cloud
+                  {pendingSync > 0 && (
+                    <span style={{
+                      position: 'absolute', top: -8, right: -8, background: '#ef4444',
+                      color: 'white', borderRadius: '50%', width: 20, height: 20,
+                      display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '10px'
+                    }}>
+                      {pendingSync}
+                    </span>
+                  )}
+                </button>
+                <button type="button" className="btn-secondary" onClick={handlePullCloud} disabled={demoBusy || syncBusy}>
+                  Descargar Nube
+                </button>
+              </div>
             </div>
-            <div className="flex items-center gap-2">
-              <button type="button" className="btn-secondary" onClick={handleLoadDemo} disabled={demoBusy}>
-                Cargar datos de demo
-              </button>
-              <button type="button" className="btn-secondary" onClick={handleResetDemo} disabled={demoBusy}>
-                Reset demo
-              </button>
-            </div>
+            {demoMessage && <div className="dashboard-pro-footnote">{demoMessage}</div>}
           </div>
-          {demoMessage && <div className="dashboard-pro-footnote">{demoMessage}</div>}
-        </div>
-      )}
+        )}
 
         <button
           type="button"
