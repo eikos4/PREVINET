@@ -70,7 +70,7 @@ export async function loadDemoData(): Promise<void> {
   // ===== Inserción de datos DEMO: Empresa A (Norte) =====
   await runTxn(["empresas", "obras", "users", "workers", "art", "irl", "talks", "documents", "fitForWork"], async (has) => {
     // 1. Empresa y Obra A
-    const empIdA = "demo-empresa-A";
+    const empIdA = "5530f68d-4e9f-4f6e-9860-29daea69581a";
     const empNombreA = "Constructora Norte SpA";
     const empRutA = "76111111-1";
 
@@ -86,7 +86,7 @@ export async function loadDemoData(): Promise<void> {
       });
     }
 
-    const obraIdA = "demo-obra-A";
+    const obraIdA = "ada41708-4680-4965-a8c7-4384a6b23a7e";
     const obraNombreA = "Edificio Central";
     if (has("obras")) {
       await db.table<Obra>("obras").put({
@@ -99,7 +99,7 @@ export async function loadDemoData(): Promise<void> {
     }
 
     // 2. Usuarios y Trabajadores A
-    const prevIdA = "demo-prev-A";
+    const prevIdA = "4859a463-54cd-4b72-a633-886ec9a64f52";
     if (has("users")) {
       await db.table<User>("users").put({
         id: prevIdA,
@@ -113,8 +113,8 @@ export async function loadDemoData(): Promise<void> {
       });
     }
 
-    const w1Id = "demo-worker-A1";
-    const w2Id = "demo-worker-A2";
+    const w1Id = "0672e096-748f-4d91-88df-6799cc974b78";
+    const w2Id = "3939e6a0-532b-42f0-a083-2070e6086f68";
 
     if (has("workers")) {
       await db.table<Worker>("workers").bulkPut([
@@ -150,7 +150,7 @@ export async function loadDemoData(): Promise<void> {
     if (has("users")) {
       await db.table<User>("users").bulkPut([
         {
-          id: "user-wA1",
+          id: "ea67df10-5384-47f3-96b6-96b09337ef11",
           name: "Juan Pérez (Norte)",
           pin: "5001",
           role: "trabajador",
@@ -159,7 +159,7 @@ export async function loadDemoData(): Promise<void> {
           creadoEn: new Date(),
         },
         {
-          id: "user-wA2",
+          id: "e044df7d-ff63-4414-b221-a7d0fd960100",
           name: "Pedro González (Norte)",
           pin: "5002",
           role: "trabajador",
@@ -173,7 +173,7 @@ export async function loadDemoData(): Promise<void> {
     // 3. Recursos (ART, IRL, Chats) A
     if (has("art")) {
       await db.table<ART>("art").put({
-        id: "demo-art-A1",
+        id: "f8435d8e-716d-491c-99c5-847247a82747",
         obra: obraNombreA,
         fecha: todayDate(),
         trabajadores: [w1Id, w2Id],
@@ -192,7 +192,7 @@ export async function loadDemoData(): Promise<void> {
   // ===== Inserción de datos DEMO: Empresa B (Sur) =====
   await runTxn(["empresas", "obras", "users", "workers", "art", "irl", "talks", "documents", "fitForWork"], async (has) => {
     // 1. Empresa y Obra B
-    const empIdB = "demo-empresa-B";
+    const empIdB = "d2be7308-3066-4180-863a-234b3f09041a";
     const empNombreB = "Ingeniería Sur Ltda";
     const empRutB = "76222222-2";
 
@@ -208,7 +208,7 @@ export async function loadDemoData(): Promise<void> {
       });
     }
 
-    const obraIdB = "demo-obra-B";
+    const obraIdB = "c3098675-9b16-4af5-b44c-35cd77874bd0";
     const obraNombreB = "Planta Solar Sur";
     if (has("obras")) {
       await db.table<Obra>("obras").put({
@@ -221,7 +221,7 @@ export async function loadDemoData(): Promise<void> {
     }
 
     // 2. Usuarios y Trabajadores B
-    const prevIdB = "demo-prev-B";
+    const prevIdB = "7ea762c2-849a-4c91-9556-32be7839352e";
     if (has("users")) {
       await db.table<User>("users").put({
         id: prevIdB,
@@ -235,8 +235,8 @@ export async function loadDemoData(): Promise<void> {
       });
     }
 
-    const w1Id = "demo-worker-B1";
-    const w2Id = "demo-worker-B2";
+    const w1Id = "c8112d35-3738-4e89-8dcb-c920fcaebf3e";
+    const w2Id = "c0fc6236-0545-4221-827d-93779e578c74";
 
     if (has("workers")) {
       await db.table<Worker>("workers").bulkPut([
@@ -272,7 +272,7 @@ export async function loadDemoData(): Promise<void> {
     if (has("users")) {
       await db.table<User>("users").bulkPut([
         {
-          id: "user-wB1",
+          id: "b3626e5e-9904-4061-9f9b-64906f238965",
           name: "Ana Silva (Sur)",
           pin: "6001",
           role: "trabajador",
@@ -281,7 +281,7 @@ export async function loadDemoData(): Promise<void> {
           creadoEn: new Date(),
         },
         {
-          id: "user-wB2",
+          id: "f96a32d1-0f46-4cb8-8c76-5a7c2e32267c",
           name: "Carlos Ruiz (Sur)",
           pin: "6002",
           role: "trabajador",
@@ -295,7 +295,7 @@ export async function loadDemoData(): Promise<void> {
     // 3. Recursos (ART, IRL, Chats) B
     if (has("irl")) {
       await db.table<IRL>("irl").put({
-        id: "demo-irl-B1",
+        id: "24c3c6f8-085e-49b9-9154-183e843236e7",
         obra: obraNombreB,
         fecha: todayDate(),
         titulo: "Protocolo Eléctrico (Sur)",
