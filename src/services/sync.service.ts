@@ -14,6 +14,7 @@ export type SyncItem = {
   | "empresa"
   | "obra"
   | "template"
+  | "user"
   | "full_sync";
   createdAt: Date;
 };
@@ -155,6 +156,28 @@ export async function flushSyncQueue() {
           company_rut: u.companyRut,
           creado_en: u.creadoEn
         }));
+        await pushTable("art", "art", (a) => ({
+          id: a.id,
+          obra: a.obra,
+          fecha: a.fecha,
+          riesgos: a.riesgos,
+          cerrado: a.cerrado,
+          creado_por_user_id: a.creadoPorUserId,
+          creado_en: a.creadoEn,
+          asignados: a.asignados,
+          trabajadores: a.trabajadores
+        }));
+        await pushTable("irl", "irl", (i) => ({
+          id: i.id,
+          obra: i.obra,
+          fecha: i.fecha,
+          titulo: i.titulo,
+          descripcion: i.descripcion,
+          estado: i.estado,
+          creado_por_user_id: i.creadoPorUserId,
+          creado_en: i.creadoEn,
+          asignados: i.asignados
+        }));
       }
     } catch (err) {
       console.error("Sync error:", err);
@@ -238,6 +261,42 @@ export async function pullFromSupabase() {
         companyId: remote.company_id,
         companyName: remote.company_name,
         companyRut: remote.company_rut,
+        creadoEn: new Date(remote.creado_en)
+      });
+    }
+  }
+
+  // Sync IRL
+  const { data: irls, error: irlErr } = await supabase.from('irl').select('*');
+  if (!irlErr && irls) {
+    for (const remote of irls) {
+      await db.table('irl').put({
+        id: remote.id,
+        obra: remote.obra,
+        fecha: remote.fecha,
+        titulo: remote.titulo,
+        descripcion: remote.descripcion,
+        estado: remote.estado,
+        creadoPorUserId: remote.creado_por_user_id,
+        asignados: remote.asignados,
+        creadoEn: new Date(remote.creado_en)
+      });
+    }
+  }
+
+  // Sync ART
+  const { data: arts, error: artErr } = await supabase.from('art').select('*');
+  if (!artErr && arts) {
+    for (const remote of arts) {
+      await db.table('art').put({
+        id: remote.id,
+        obra: remote.obra,
+        fecha: remote.fecha,
+        riesgos: remote.riesgos,
+        cerrado: remote.cerrado,
+        creadoPorUserId: remote.creado_por_user_id,
+        asignados: remote.asignados,
+        trabajadores: remote.trabajadores,
         creadoEn: new Date(remote.creado_en)
       });
     }
