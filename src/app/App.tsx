@@ -47,6 +47,7 @@ import ExcelTemplatesView from "../modules/templates/ExcelTemplatesView";
 
 import PrevencionistaTimelineView from "../modules/prevencionista/PrevencionistaTimelineView";
 import AIAssistant from "../modules/aiAssistant/AIAssistant";
+import FloatingAIAssistant from "../modules/aiAssistant/FloatingAIAssistant";
 
 import {
   canViewDashboard,
@@ -707,6 +708,23 @@ export default function App() {
           <ExcelTemplatesView />
         )}
       </main>
+
+      {/* Floating AI Assistant for Prevencionistas */}
+      {(role === "prevencionista" || role === "supervisor") && (
+        <FloatingAIAssistant
+          onCreateART={(analysis) => {
+            // Navigate to ART form with AI suggestions
+            setSection("art");
+            // Store analysis in sessionStorage for ART form to pick up
+            sessionStorage.setItem("aiArtSuggestions", JSON.stringify({
+              riesgos: analysis.risks.join(", "),
+              medidasPreventivas: analysis.preventiveMeasures.join("\n"),
+              epp: analysis.requiredPPE.join(", "),
+            }));
+            setReload((r) => r + 1);
+          }}
+        />
+      )}
     </div>
   );
 }
