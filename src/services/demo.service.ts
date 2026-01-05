@@ -5,8 +5,6 @@ import { normalizeRole } from "../modules/auth/auth.service";
 import type { Empresa } from "../modules/empresas/empresas.service";
 import type { Obra } from "../modules/obras/obras.service";
 import type { Worker } from "../modules/workers/worker.service";
-import type { ART } from "../modules/art/art.service";
-import type { IRL } from "../modules/irl/irl.service";
 import { addToSyncQueue } from "./sync.service";
 
 function todayDate(): string {
@@ -29,17 +27,6 @@ async function clearStores(names: string[]) {
   });
 }
 
-async function runTxn<T>(names: string[], fn: (has: (n: string) => boolean) => Promise<T>) {
-  const exist = existingStoreSet();
-  const toUse = names.filter((n) => exist.has(n));
-  const has = (n: string) => exist.has(n);
-  if (toUse.length === 0) return await fn(has);
-  const tables = toUse.map((n) => db.table(n));
-  return await db.transaction("rw", tables as any, async () => {
-    return await fn(has);
-  });
-}
-
 export async function loadDemoData(): Promise<void> {
   // Garantiza apertura/upgrade del schema antes de transaccionar
   try { await db.open(); } catch { }
@@ -49,267 +36,360 @@ export async function loadDemoData(): Promise<void> {
     ? ((await db.table<User>("users").get(currentUserId)) as User | undefined)
     : undefined;
 
-  // Limpieza en grupos (solo stores existentes)
-  await clearStores(["users", "workers"]);
-  await clearStores(["empresas", "obras"]);
-  await clearStores(["templates"]);
-  await clearStores(["art", "reports"]);
-  await clearStores(["irl", "talks"]);
-  await clearStores(["fitForWork"]);
-  await clearStores(["findingIncidents", "documents"]);
-  await clearStores(["evidences", "syncQueue"]);
-  await clearStores(["irlSignedPdfs", "artSignedPdfs"]);
-  await clearStores(["talkSignedPdfs", "fitForWorkSignedPdfs"]);
-  await clearStores(["documentSignedPdfs"]);
-  await clearStores(["templateSignedPdfs", "workerEnrollmentSignedPdfs"]);
+  // Limpieza total
+  const allStores = [
+    "users", "workers", "empresas", "obras", "templates",
+    "art", "reports", "irl", "talks", "fitForWork",
+    "findingIncidents", "documents", "evidences", "syncQueue",
+    "irlSignedPdfs", "artSignedPdfs", "talkSignedPdfs",
+    "fitForWorkSignedPdfs", "documentSignedPdfs",
+    "templateSignedPdfs", "workerEnrollmentSignedPdfs",
+    "notifications"
+  ];
+  await clearStores(allStores);
 
   // Reinsertar superadmin actual (si existía) para mantener sesión
   if (currentUser && normalizeRole(currentUser.role) === "superadmin") {
     await db.table("users").put(currentUser);
   }
 
-  // ===== Inserción de datos DEMO: Empresa A (Norte) =====
-  await runTxn(["empresas", "obras", "users", "workers", "art", "irl", "talks", "documents", "fitForWork"], async (has) => {
-    // 1. Empresa y Obra A
-    const empIdA = "5530f68d-4e9f-4f6e-9860-29daea69581a";
-    const empNombreA = "Constructora Norte SpA";
-    const empRutA = "76111111-1";
+  // IDs Compartidos
+  const empIdA = "5530f68d-4e9f-4f6e-9860-29daea69581a";
+  const empNombreA = "Constructora Norte SpA";
+  const empRutA = "76111111-1";
 
-    if (has("empresas")) {
-      await db.table<Empresa>("empresas").put({
-        id: empIdA,
-        nombreRazonSocial: empNombreA,
-        rut: empRutA,
-        tipo: "mandante",
-        giro: "Construcción Civil",
-        estado: "activa",
-        creadoEn: new Date(),
-      });
+  const obraIdA = "ada41708-4680-4965-a8c7-4384a6b23a7e";
+  const obraNombreA = "Edificio Central";
+
+  const w1Id = "0672e096-748f-4d91-88df-6799cc974b78"; // Juan
+  const w2Id = "3939e6a0-532b-42f0-a083-2070e6086f68"; // Pedro
+  const w3Id = "c8112d35-3738-4e89-8dcb-c920fcaebf3e"; // Ana
+
+  // 1. EMPRESAS Y OBRAS
+  await db.table<Empresa>("empresas").bulkPut([
+    {
+      id: empIdA,
+      nombreRazonSocial: empNombreA,
+      rut: empRutA,
+      tipo: "mandante",
+      giro: "Construcción Civil",
+      estado: "activa",
+      creadoEn: new Date(),
+    },
+    {
+      id: "d2be7308-3066-4180-863a-234b3f09041a",
+      nombreRazonSocial: "Ingeniería Sur Ltda",
+      rut: "76222222-2",
+      tipo: "subcontratista",
+      giro: "Montaje Industrial",
+      estado: "activa",
+      creadoEn: new Date(),
     }
+  ]);
 
-    const obraIdA = "ada41708-4680-4965-a8c7-4384a6b23a7e";
-    const obraNombreA = "Edificio Central";
-    if (has("obras")) {
-      await db.table<Obra>("obras").put({
-        id: obraIdA,
-        nombre: obraNombreA,
-        estado: "activa",
-        creadoEn: new Date(),
-        empresaId: empIdA,
-      });
+  await db.table<Obra>("obras").bulkPut([
+    {
+      id: obraIdA,
+      nombre: obraNombreA,
+      estado: "activa",
+      creadoEn: new Date(),
+      empresaId: empIdA,
+    },
+    {
+      id: "c3098675-9b16-4af5-b44c-35cd77874bd0",
+      nombre: "Planta Solar Sur",
+      estado: "activa",
+      creadoEn: new Date(),
+      empresaId: "d2be7308-3066-4180-863a-234b3f09041a",
     }
+  ]);
 
-    // 2. Usuarios y Trabajadores A
-    const prevIdA = "4859a463-54cd-4b72-a633-886ec9a64f52";
-    if (has("users")) {
-      await db.table<User>("users").put({
-        id: prevIdA,
-        name: "Prevencionista Norte",
-        pin: "4001",
-        role: "prevencionista",
-        companyName: empNombreA,
-        companyRut: empRutA,
-        companyId: empIdA,
-        creadoEn: new Date(),
-      });
+  // 2. USUARIOS DE ADMINISTRACIÓN (Constructora Norte)
+  await db.table<User>("users").bulkPut([
+    {
+      id: "u-admin-norte",
+      name: "Admin Empresa Norte",
+      pin: "1001",
+      role: "administrador",
+      companyName: empNombreA,
+      companyRut: empRutA,
+      companyId: empIdA,
+      creadoEn: new Date(),
+    },
+    {
+      id: "u-auditor-norte",
+      name: "Auditor Externo Norte",
+      pin: "2001",
+      role: "auditor",
+      companyName: empNombreA,
+      companyRut: empRutA,
+      companyId: empIdA,
+      creadoEn: new Date(),
+    },
+    {
+      id: "u-supervisor-norte",
+      name: "Supervisor de Terreno",
+      pin: "3001",
+      role: "supervisor",
+      companyName: empNombreA,
+      companyRut: empRutA,
+      companyId: empIdA,
+      creadoEn: new Date(),
+    },
+    {
+      id: "u-prev-norte",
+      name: "Prevencionista Norte",
+      pin: "4001",
+      role: "prevencionista",
+      companyName: empNombreA,
+      companyRut: empRutA,
+      companyId: empIdA,
+      creadoEn: new Date(),
     }
+  ]);
 
-    const w1Id = "0672e096-748f-4d91-88df-6799cc974b78";
-    const w2Id = "3939e6a0-532b-42f0-a083-2070e6086f68";
+  // 3. TRABAJADORES Y SUS USUARIOS
+  await db.table<Worker>("workers").bulkPut([
+    {
+      id: w1Id,
+      creadoEn: new Date(),
+      nombre: "Juan Pérez",
+      rut: "10111111-1",
+      cargo: "Maestro Mayor",
+      obra: obraNombreA,
+      empresaNombre: empNombreA,
+      empresaRut: empRutA,
+      telefono: "+56 9 1111 0001",
+      pin: "5001",
+      habilitado: true,
+    },
+    {
+      id: w2Id,
+      creadoEn: new Date(),
+      nombre: "Pedro González",
+      rut: "10222222-2",
+      cargo: "Jornal",
+      obra: obraNombreA,
+      empresaNombre: empNombreA,
+      empresaRut: empRutA,
+      telefono: "+56 9 1111 0002",
+      pin: "5002",
+      habilitado: true,
+    },
+    {
+      id: w3Id,
+      creadoEn: new Date(),
+      nombre: "Ana Silva",
+      rut: "20111111-1",
+      cargo: "Soldador",
+      obra: obraNombreA,
+      empresaNombre: empNombreA,
+      empresaRut: empRutA,
+      telefono: "+56 9 2222 0001",
+      pin: "6001",
+      habilitado: true,
+    }
+  ]);
 
-    if (has("workers")) {
-      await db.table<Worker>("workers").bulkPut([
+  await db.table<User>("users").bulkPut([
+    {
+      id: "u-w1",
+      name: "Juan Pérez",
+      pin: "5001",
+      role: "trabajador",
+      workerId: w1Id,
+      companyId: empIdA,
+      creadoEn: new Date(),
+    },
+    {
+      id: "u-w2",
+      name: "Pedro González",
+      pin: "5002",
+      role: "trabajador",
+      workerId: w2Id,
+      companyId: empIdA,
+      creadoEn: new Date(),
+    },
+    {
+      id: "u-w3",
+      name: "Ana Silva",
+      pin: "6001",
+      role: "trabajador",
+      workerId: w3Id,
+      companyId: empIdA,
+      creadoEn: new Date(),
+    }
+  ]);
+
+  // 4. MÓDULOS OPERATIVOS
+
+  // A. ART (Análisis de Riesgo)
+  await db.table("art").bulkPut([
+    {
+      id: "art-1",
+      obra: obraNombreA,
+      fecha: todayDate(),
+      riesgos: "Trabajos en altura y manejo de cargas",
+      cerrado: false,
+      creadoPorUserId: "u-prev-norte",
+      creadoEn: new Date(),
+      trabajadores: [w1Id, w2Id, w3Id],
+      asignados: [
+        { workerId: w1Id, token: "tok-art-1-w1" },
+        { workerId: w2Id, token: "tok-art-1-w2" },
+        { workerId: w3Id, token: "tok-art-1-w3" },
+      ]
+    },
+    {
+      id: "art-2",
+      obra: obraNombreA,
+      fecha: todayDate(),
+      riesgos: "Excavación y movimiento de tierra",
+      cerrado: true,
+      creadoPorUserId: "u-prev-norte",
+      creadoEn: new Date(Date.now() - 86400000), // Ayer
+      trabajadores: [w1Id],
+      asignados: [
         {
-          id: w1Id,
-          creadoEn: new Date(),
-          nombre: "Juan Pérez (Norte)",
-          rut: "10111111-1",
-          cargo: "Maestro Mayor",
-          obra: obraNombreA,
-          empresaNombre: empNombreA,
-          empresaRut: empRutA,
-          telefono: "+56 9 1111 0001",
-          pin: "5001",
-          habilitado: true,
-        },
-        {
-          id: w2Id,
-          creadoEn: new Date(),
-          nombre: "Pedro González (Norte)",
-          rut: "10222222-2",
-          cargo: "Jornal",
-          obra: obraNombreA,
-          empresaNombre: empNombreA,
-          empresaRut: empRutA,
-          telefono: "+56 9 1111 0002",
-          pin: "5002",
-          habilitado: true,
-        }
-      ]);
-    }
-
-    if (has("users")) {
-      await db.table<User>("users").bulkPut([
-        {
-          id: "ea67df10-5384-47f3-96b6-96b09337ef11",
-          name: "Juan Pérez (Norte)",
-          pin: "5001",
-          role: "trabajador",
           workerId: w1Id,
-          companyId: empIdA,
-          creadoEn: new Date(),
-        },
+          token: "tok-art-2-w1",
+          firmadoPorNombre: "Juan Pérez",
+          firmadoPorRut: "10111111-1",
+          firmadoEn: new Date()
+        }
+      ]
+    }
+  ]);
+
+  // B. Charlas (Talks)
+  await db.table("talks").bulkPut([
+    {
+      id: "talk-1",
+      tema: "Uso correcto de EPP y protección auditiva",
+      obra: obraNombreA,
+      fechaHora: new Date().toISOString(),
+      estado: "PUBLICADO",
+      creadoEn: new Date(),
+      creadoPorUserId: "u-prev-norte",
+      asignados: [
+        { workerId: w1Id, token: "tok-talk-1-w1" },
+        { workerId: w2Id, token: "tok-talk-1-w2" },
+        { workerId: w3Id, token: "tok-talk-1-w3" }
+      ]
+    }
+  ]);
+
+  // C. Fit-for-Work (Aptitud Diaria)
+  await db.table("fitForWork").bulkPut([
+    {
+      id: "ffw-1",
+      fecha: todayDate(),
+      turno: "mañana",
+      obra: obraNombreA,
+      estado: "PUBLICADO",
+      creadoEn: new Date(),
+      questions: [
+        { id: "q1", question: "¿Te sientes en buen estado de salud?" },
+        { id: "q2", question: "¿Has descansado adecuadamente?" },
+        { id: "q3", question: "¿Estás libre de alcohol y drogas?" }
+      ],
+      asignados: [
+        { workerId: w1Id, token: "tok-ffw-1-w1" },
         {
-          id: "e044df7d-ff63-4414-b221-a7d0fd960100",
-          name: "Pedro González (Norte)",
-          pin: "5002",
-          role: "trabajador",
           workerId: w2Id,
-          companyId: empIdA,
-          creadoEn: new Date(),
+          token: "tok-ffw-1-w2",
+          apto: false, // PEDRO NO ESTÁ APTO (para mostrar alerta en dashboard)
+          firmadoEn: new Date(),
+          firmadoPorNombre: "Pedro González",
+          firmadoPorRut: "10222222-2",
+          responses: [
+            { id: "q1", question: "¿Te sientes en buen estado de salud?", response: false },
+            { id: "q2", question: "¿Has descansado adecuadamente?", response: true },
+            { id: "q3", question: "¿Estás libre de alcohol y drogas?", response: true }
+          ]
         }
-      ]);
+      ]
     }
+  ]);
 
-    // 3. Recursos (ART, IRL, Chats) A
-    if (has("art")) {
-      await db.table<ART>("art").put({
-        id: "f8435d8e-716d-491c-99c5-847247a82747",
-        obra: obraNombreA,
-        fecha: todayDate(),
-        trabajadores: [w1Id, w2Id],
-        asignados: [
-          { workerId: w1Id, token: "tok-art-A1" },
-          { workerId: w2Id, token: "tok-art-A2" },
-        ],
-        riesgos: "Caída a distinto nivel (Norte)",
-        cerrado: false,
-        creadoPorUserId: prevIdA,
-        creadoEn: new Date(),
-      });
+  // D. IRL (Protocolos Informativos)
+  await db.table("irl").bulkPut([
+    {
+      id: "irl-1",
+      titulo: "Protocolo de Seguridad en Soldadura",
+      descripcion: "Medidas preventivas para evitar quemaduras y proyecciones.",
+      obra: obraNombreA,
+      fecha: todayDate(),
+      estado: "PUBLICADO",
+      creadoEn: new Date(),
+      creadoPorUserId: "u-prev-norte",
+      asignados: [
+        { workerId: w3Id, token: "tok-irl-1-w3" }
+      ]
     }
-  });
+  ]);
 
-  // ===== Inserción de datos DEMO: Empresa B (Sur) =====
-  await runTxn(["empresas", "obras", "users", "workers", "art", "irl", "talks", "documents", "fitForWork"], async (has) => {
-    // 1. Empresa y Obra B
-    const empIdB = "d2be7308-3066-4180-863a-234b3f09041a";
-    const empNombreB = "Ingeniería Sur Ltda";
-    const empRutB = "76222222-2";
-
-    if (has("empresas")) {
-      await db.table<Empresa>("empresas").put({
-        id: empIdB,
-        nombreRazonSocial: empNombreB,
-        rut: empRutB,
-        tipo: "subcontratista",
-        giro: "Montaje Industrial",
-        estado: "activa",
-        creadoEn: new Date(),
-      });
+  // E. Hallazgos e Incidentes (Findings)
+  await db.table("findingIncidents").bulkPut([
+    {
+      id: "find-1",
+      tipo: "HALLAZGO",
+      estado: "ABIERTO",
+      obra: obraNombreA,
+      lugar: "Sector Grúa Torre",
+      fecha: todayDate(),
+      descripcion: "Cables eléctricos expuestos en paso peatonal de la obra.",
+      riesgoPotencial: "Electrocución / Caídas",
+      responsable: "Jefe de Eléctricos",
+      creadoPorUserId: "u-supervisor-norte",
+      creadoEn: new Date()
+    },
+    {
+      id: "find-2",
+      tipo: "INCIDENCIA",
+      estado: "CERRADO",
+      obra: obraNombreA,
+      lugar: "Bodega materiales",
+      fecha: todayDate(),
+      descripcion: "Derrame menor de aceite hidráulico durante descarga.",
+      causasProbables: "Falla en manguera de camión",
+      medidasInmediatas: "Limpieza con aserrín y contención",
+      creadoPorUserId: "u-supervisor-norte",
+      creadoEn: new Date(Date.now() - 3600000),
+      cerradoEn: new Date()
     }
+  ]);
 
-    const obraIdB = "c3098675-9b16-4af5-b44c-35cd77874bd0";
-    const obraNombreB = "Planta Solar Sur";
-    if (has("obras")) {
-      await db.table<Obra>("obras").put({
-        id: obraIdB,
-        nombre: obraNombreB,
-        estado: "activa",
-        creadoEn: new Date(),
-        empresaId: empIdB,
-      });
+  // F. Documentos
+  await db.table("documents").bulkPut([
+    {
+      id: "doc-1",
+      titulo: "Reglamento Interno de Orden, Higiene y Seguridad",
+      descripcion: "Documento oficial de la empresa para el año 2026.",
+      obra: "GLOBAL",
+      fecha: todayDate(),
+      estado: "PUBLICADO",
+      creadoEn: new Date(),
+      creadoPorUserId: "u-admin-norte",
+      asignados: [
+        { workerId: w1Id, token: "tok-doc-w1" },
+        { workerId: w2Id, token: "tok-doc-w2" }
+      ]
     }
+  ]);
 
-    // 2. Usuarios y Trabajadores B
-    const prevIdB = "7ea762c2-849a-4c91-9556-32be7839352e";
-    if (has("users")) {
-      await db.table<User>("users").put({
-        id: prevIdB,
-        name: "Prevencionista Sur",
-        pin: "4002",
-        role: "prevencionista",
-        companyName: empNombreB,
-        companyRut: empRutB,
-        companyId: empIdB,
-        creadoEn: new Date(),
-      });
+  // G. Reportes de Gestión (Dashboards)
+  await db.table("reports").bulkPut([
+    {
+      id: "rep-1",
+      tipo: "REVISIÓN SEMANAL",
+      estado: "CERRADO",
+      obra: obraNombreA,
+      fecha: todayDate(),
+      synced: true,
+      creadoEn: new Date()
     }
-
-    const w1Id = "c8112d35-3738-4e89-8dcb-c920fcaebf3e";
-    const w2Id = "c0fc6236-0545-4221-827d-93779e578c74";
-
-    if (has("workers")) {
-      await db.table<Worker>("workers").bulkPut([
-        {
-          id: w1Id,
-          creadoEn: new Date(),
-          nombre: "Ana Silva (Sur)",
-          rut: "20111111-1",
-          cargo: "Soldador",
-          obra: obraNombreB,
-          empresaNombre: empNombreB,
-          empresaRut: empRutB,
-          telefono: "+56 9 2222 0001",
-          pin: "6001",
-          habilitado: true,
-        },
-        {
-          id: w2Id,
-          creadoEn: new Date(),
-          nombre: "Carlos Ruiz (Sur)",
-          rut: "20222222-2",
-          cargo: "Eléctrico",
-          obra: obraNombreB,
-          empresaNombre: empNombreB,
-          empresaRut: empRutB,
-          telefono: "+56 9 2222 0002",
-          pin: "6002",
-          habilitado: true,
-        }
-      ]);
-    }
-
-    if (has("users")) {
-      await db.table<User>("users").bulkPut([
-        {
-          id: "b3626e5e-9904-4061-9f9b-64906f238965",
-          name: "Ana Silva (Sur)",
-          pin: "6001",
-          role: "trabajador",
-          workerId: w1Id,
-          companyId: empIdB,
-          creadoEn: new Date(),
-        },
-        {
-          id: "f96a32d1-0f46-4cb8-8c76-5a7c2e32267c",
-          name: "Carlos Ruiz (Sur)",
-          pin: "6002",
-          role: "trabajador",
-          workerId: w2Id,
-          companyId: empIdB,
-          creadoEn: new Date(),
-        }
-      ]);
-    }
-
-    // 3. Recursos (ART, IRL, Chats) B
-    if (has("irl")) {
-      await db.table<IRL>("irl").put({
-        id: "24c3c6f8-085e-49b9-9154-183e843236e7",
-        obra: obraNombreB,
-        fecha: todayDate(),
-        titulo: "Protocolo Eléctrico (Sur)",
-        descripcion: "Normas de seguridad para trabajos en alta tensión",
-        estado: "PUBLICADO",
-        asignados: [
-          { workerId: w2Id, token: "tok-irl-B2" } // Solo al electrico
-        ],
-        creadoPorUserId: prevIdB,
-        creadoEn: new Date(),
-      });
-    }
-  });
+  ]);
 
   // 🔄 Trigger Cloud Sync immediately for the demo data
   await addToSyncQueue("full_sync");
