@@ -46,6 +46,7 @@ import TemplatesView from "../modules/templates/TemplatesView";
 import ExcelTemplatesView from "../modules/templates/ExcelTemplatesView";
 
 import PrevencionistaTimelineView from "../modules/prevencionista/PrevencionistaTimelineView";
+import AIAssistant from "../modules/aiAssistant/AIAssistant";
 
 import {
   canViewDashboard,
@@ -71,7 +72,7 @@ import { pullFromSupabase } from "../services/sync.service";
 import { APP_MODULES } from "./modules.registry";
 
 type View = "landing" | "login" | "app";
-type Section = "inicio" | "dashboard" | "workers" | "workerTimeline" | "art" | "profile" | "irl" | "talks" | "fitForWork" | "findingIncidents" | "templates" | "excelTemplates" | "obras" | "empresas" | "adminUsers";
+type Section = "inicio" | "dashboard" | "workers" | "workerTimeline" | "art" | "profile" | "irl" | "talks" | "fitForWork" | "findingIncidents" | "templates" | "excelTemplates" | "obras" | "empresas" | "adminUsers" | "aiAssistant";
 
 export default function App() {
   const [view, setView] = useState<View>("landing");
