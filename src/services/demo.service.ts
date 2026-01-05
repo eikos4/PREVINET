@@ -104,7 +104,7 @@ export async function loadDemoData(): Promise<void> {
     }
   ]);
 
-  // 2. USUARIOS DE ADMINISTRACIÓN (Constructora Norte)
+  // 2. USUARIOS DE ADMINISTRACIÓN (Constructora Norte SpA)
   await db.table<User>("users").bulkPut([
     {
       id: "u-admin-norte",
@@ -144,6 +144,44 @@ export async function loadDemoData(): Promise<void> {
       companyName: empNombreA,
       companyRut: empRutA,
       companyId: empIdA,
+      creadoEn: new Date(),
+    }
+  ]);
+
+  // 2.1 USUARIOS DE ADMINISTRACIÓN (Ingeniería Sur Ltda)
+  const empIdB = "d2be7308-3066-4180-863a-234b3f09041a";
+  const empNombreB = "Ingeniería Sur Ltda";
+  const empRutB = "76222222-2";
+
+  await db.table<User>("users").bulkPut([
+    {
+      id: "u-admin-sur",
+      name: "Admin Empresa Sur",
+      pin: "7001",
+      role: "administrador",
+      companyName: empNombreB,
+      companyRut: empRutB,
+      companyId: empIdB,
+      creadoEn: new Date(),
+    },
+    {
+      id: "u-prev-sur",
+      name: "Prevencionista Sur",
+      pin: "8001",
+      role: "prevencionista",
+      companyName: empNombreB,
+      companyRut: empRutB,
+      companyId: empIdB,
+      creadoEn: new Date(),
+    },
+    {
+      id: "u-auditor-sur",
+      name: "Auditor Planta Solar",
+      pin: "9001",
+      role: "auditor",
+      companyName: empNombreB,
+      companyRut: empRutB,
+      companyId: empIdB,
       creadoEn: new Date(),
     }
   ]);
@@ -188,6 +226,19 @@ export async function loadDemoData(): Promise<void> {
       telefono: "+56 9 2222 0001",
       pin: "6001",
       habilitado: true,
+    },
+    {
+      id: "w4-sur",
+      creadoEn: new Date(),
+      nombre: "Carlos Ruiz (Sur)",
+      rut: "20222222-2",
+      cargo: "Eléctrico",
+      obra: "Planta Solar Sur",
+      empresaNombre: empNombreB,
+      empresaRut: empRutB,
+      telefono: "+56 9 3333 4444",
+      pin: "9501",
+      habilitado: true,
     }
   ]);
 
@@ -217,6 +268,15 @@ export async function loadDemoData(): Promise<void> {
       role: "trabajador",
       workerId: w3Id,
       companyId: empIdA,
+      creadoEn: new Date(),
+    },
+    {
+      id: "u-w4-sur",
+      name: "Carlos Ruiz",
+      pin: "9501",
+      role: "trabajador",
+      workerId: "w4-sur",
+      companyId: empIdB,
       creadoEn: new Date(),
     }
   ]);
