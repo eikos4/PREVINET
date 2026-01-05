@@ -1,6 +1,7 @@
 import { db } from "../../offline/db";
 import { addToSyncQueue } from "../../services/sync.service";
 import { saveSignedFitForWorkPdf } from "./fitForWorkPdf.service";
+import { createNotification } from "../notifications/notifications.service";
 
 export type FitForWorkQuestion = {
   id: string;
@@ -106,14 +107,14 @@ export async function signFitForWork(
     asignados: fitForWork.asignados.map((a) =>
       a.workerId === workerId
         ? {
-            ...a,
-            responses,
-            firmadoPorNombre,
-            firmadoPorRut,
-            firmadoEn,
-            apto,
-            geo,
-          }
+          ...a,
+          responses,
+          firmadoPorNombre,
+          firmadoPorRut,
+          firmadoEn,
+          apto,
+          geo,
+        }
         : a
     ),
   };
@@ -131,6 +132,18 @@ export async function signFitForWork(
     assignment: updatedAssignment,
     signatureDataUrl,
   });
+
+  // 🔔 Notificar al creador del Fit-for-Work
+  if (updated.creadoPorUserId) {
+    const estadoTexto = apto ? "✅ Apto" : "⚠️ NO APTO";
+    await createNotification({
+      type: apto ? "fitforwork_signed" : "fitforwork_no_apto",
+      title: `${firmadoPorNombre} completó Fit-for-Work`,
+      body: `Estado: ${estadoTexto} - Turno: ${updated.turno}`,
+      toUserId: updated.creadoPorUserId,
+      related: { entity: "fitForWork", id: updated.id },
+    });
+  }
 
   return updated;
 }

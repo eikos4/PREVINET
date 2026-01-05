@@ -1,6 +1,7 @@
 import { db } from "../../offline/db";
 import { addToSyncQueue } from "../../services/sync.service";
 import { saveSignedDocumentPdf } from "./documentsPdf.service";
+import { createNotification } from "../notifications/notifications.service";
 
 export type DocumentWorkerAssignment = {
   workerId: string;
@@ -84,12 +85,12 @@ export async function signDocument(
     asignados: doc.asignados.map((a) =>
       a.workerId === workerId
         ? {
-            ...a,
-            firmadoPorNombre,
-            firmadoPorRut,
-            firmadoEn,
-            geo,
-          }
+          ...a,
+          firmadoPorNombre,
+          firmadoPorRut,
+          firmadoEn,
+          geo,
+        }
         : a
     ),
   };
@@ -107,6 +108,17 @@ export async function signDocument(
     assignment: updatedAssignment,
     signatureDataUrl,
   });
+
+  // 🔔 Notificar al creador del documento
+  if (updated.creadoPorUserId) {
+    await createNotification({
+      type: "document_signed",
+      title: `${firmadoPorNombre} leyó el documento`,
+      body: `Documento: ${updated.titulo}`,
+      toUserId: updated.creadoPorUserId,
+      related: { entity: "document", id: updated.id },
+    });
+  }
 
   return updated;
 }

@@ -1,6 +1,7 @@
 import { db } from "../../offline/db";
 import { addToSyncQueue } from "../../services/sync.service";
 import { saveSignedTalkPdf } from "./talkPdf.service";
+import { createNotification } from "../notifications/notifications.service";
 
 export type TalkWorkerAssignment = {
   workerId: string;
@@ -82,12 +83,12 @@ export async function signTalk(
     asignados: talk.asignados.map((a) =>
       a.workerId === workerId
         ? {
-            ...a,
-            firmadoPorNombre,
-            firmadoPorRut,
-            firmadoEn,
-            geo,
-          }
+          ...a,
+          firmadoPorNombre,
+          firmadoPorRut,
+          firmadoEn,
+          geo,
+        }
         : a
     ),
   };
@@ -105,6 +106,17 @@ export async function signTalk(
     assignment: updatedAssignment,
     signatureDataUrl,
   });
+
+  // 🔔 Notificar al creador de la charla
+  if (updated.creadoPorUserId) {
+    await createNotification({
+      type: "talk_signed",
+      title: `${firmadoPorNombre} completó la charla`,
+      body: `Tema: ${updated.tema}`,
+      toUserId: updated.creadoPorUserId,
+      related: { entity: "talk", id: updated.id },
+    });
+  }
 
   return updated;
 }

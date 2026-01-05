@@ -1,6 +1,7 @@
 import { db } from "../../offline/db";
 import { addToSyncQueue } from "../../services/sync.service";
 import { saveSignedArtPdf } from "./artPdf.service";
+import { createNotification } from "../notifications/notifications.service";
 
 export type ARTVerificationQuestion = {
   id: "q1" | "q2";
@@ -89,9 +90,9 @@ export async function signART(
     art.asignados && art.asignados.length > 0
       ? art.asignados
       : (art.trabajadores ?? []).map((id) => ({
-          workerId: id,
-          token: crypto.randomUUID(),
-        }));
+        workerId: id,
+        token: crypto.randomUUID(),
+      }));
 
   const idx = assignments.findIndex((a) => a.workerId === workerId);
   if (idx === -1) throw new Error("Este ART no está asignado a este trabajador");
@@ -129,14 +130,14 @@ export async function signART(
     asignados: assignments.map((a) =>
       a.workerId === workerId
         ? {
-            ...a,
-            firmadoPorNombre,
-            firmadoPorRut,
-            firmadoEn,
-            verificationAnswers: hasQuestions ? verificationParams!.answers : undefined,
-            verificationAt: hasQuestions ? verificationParams!.verificationAt : undefined,
-            geo,
-          }
+          ...a,
+          firmadoPorNombre,
+          firmadoPorRut,
+          firmadoEn,
+          verificationAnswers: hasQuestions ? verificationParams!.answers : undefined,
+          verificationAt: hasQuestions ? verificationParams!.verificationAt : undefined,
+          geo,
+        }
         : a
     ),
   };
@@ -154,6 +155,17 @@ export async function signART(
     assignment: updatedAssignment,
     signatureDataUrl,
   });
+
+  // 🔔 Notificar al creador del ART
+  if (updated.creadoPorUserId) {
+    await createNotification({
+      type: "art_signed",
+      title: `${firmadoPorNombre} firmó el ART`,
+      body: `Riesgos: ${updated.riesgos || 'N/A'}`,
+      toUserId: updated.creadoPorUserId,
+      related: { entity: "art", id: updated.id },
+    });
+  }
 
   return updated;
 }

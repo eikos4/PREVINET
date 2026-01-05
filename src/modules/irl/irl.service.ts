@@ -1,6 +1,7 @@
 import { db } from "../../offline/db";
 import { addToSyncQueue } from "../../services/sync.service";
 import { saveSignedIrlPdf } from "./irlPdf.service";
+import { createNotification } from "../notifications/notifications.service";
 
 export type IRLVerificationQuestion = {
   id: "q1" | "q2";
@@ -139,14 +140,14 @@ export async function signIRL(
     asignados: irl.asignados.map((a) =>
       a.workerId === workerId
         ? {
-            ...a,
-            verificationAnswers,
-            verificationAt,
-            firmadoPorNombre,
-            firmadoPorRut,
-            firmadoEn,
-            geo,
-          }
+          ...a,
+          verificationAnswers,
+          verificationAt,
+          firmadoPorNombre,
+          firmadoPorRut,
+          firmadoEn,
+          geo,
+        }
         : a
     ),
   };
@@ -164,6 +165,17 @@ export async function signIRL(
     assignment: updatedAssignment,
     signatureDataUrl,
   });
+
+  // 🔔 Notificar al creador del IRL
+  if (updated.creadoPorUserId) {
+    await createNotification({
+      type: "irl_signed",
+      title: `${firmadoPorNombre} leyó el protocolo`,
+      body: `IRL: ${updated.titulo}`,
+      toUserId: updated.creadoPorUserId,
+      related: { entity: "irl", id: updated.id },
+    });
+  }
 
   return updated;
 }
