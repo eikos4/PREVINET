@@ -118,9 +118,11 @@ export default function FloatingAIAssistant({ onCreateART }: FloatingAIAssistant
 
     return (
         <div
-            className={`fixed ${isMinimized ? "bottom-6 right-6 w-80" : "bottom-6 right-6 w-96"
-                } bg-slate-900 rounded-2xl shadow-2xl border border-slate-700 z-50 transition-all`}
-            style={{ maxHeight: isMinimized ? "60px" : "600px" }}
+            className={`fixed ${isMinimized
+                ? "bottom-4 right-4 w-auto max-w-[calc(100vw-2rem)]"
+                : "bottom-0 left-0 right-0 top-0 sm:bottom-6 sm:right-6 sm:left-auto sm:top-auto sm:w-96 w-full h-[100dvh] sm:h-auto"
+                } bg-slate-900 sm:rounded-2xl shadow-2xl border-t sm:border border-slate-700 z-50 transition-all flex flex-col`}
+            style={{ maxHeight: isMinimized ? "auto" : "none" }}
         >
             {/* Header */}
             <div className="bg-gradient-to-r from-purple-600 to-pink-600 p-4 rounded-t-2xl flex items-center justify-between">
@@ -150,7 +152,7 @@ export default function FloatingAIAssistant({ onCreateART }: FloatingAIAssistant
             {!isMinimized && (
                 <>
                     {/* Messages */}
-                    <div className="h-96 overflow-y-auto p-4 space-y-3 bg-slate-800">
+                    <div className="flex-1 overflow-y-auto p-4 space-y-3 bg-slate-800 sm:h-96 sm:max-h-[600px]">
                         {messages.map((msg, idx) => (
                             <div
                                 key={idx}
@@ -158,8 +160,8 @@ export default function FloatingAIAssistant({ onCreateART }: FloatingAIAssistant
                             >
                                 <div
                                     className={`max-w-[85%] rounded-xl p-3 text-sm ${msg.role === "user"
-                                            ? "bg-blue-600 text-white"
-                                            : "bg-slate-700 text-slate-100"
+                                        ? "bg-blue-600 text-white"
+                                        : "bg-slate-700 text-slate-100"
                                         }`}
                                 >
                                     {msg.imageUrl && (
