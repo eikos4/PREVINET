@@ -30,11 +30,9 @@ export default function DocumentWorkerList({ worker }: { worker: Worker }) {
 
   const sorted = useMemo(() => {
     return [...docs].sort((a, b) => {
-      try {
-        return new Date(b.creadoEn).getTime() - new Date(a.creadoEn).getTime();
-      } catch {
-        return 0;
-      }
+      const timeA = a.creadoEn ? new Date(a.creadoEn).getTime() : 0;
+      const timeB = b.creadoEn ? new Date(b.creadoEn).getTime() : 0;
+      return (isNaN(timeB) ? 0 : timeB) - (isNaN(timeA) ? 0 : timeA);
     });
   }, [docs]);
 
@@ -83,7 +81,7 @@ export default function DocumentWorkerList({ worker }: { worker: Worker }) {
             Cargando documentos…
           </p>
         </div>
-        </div>
+      </div>
     );
   }
 
@@ -118,111 +116,111 @@ export default function DocumentWorkerList({ worker }: { worker: Worker }) {
         </div>
 
         <div className="p-6">
-        {error && (
-          <p className="form-error" style={{ marginTop: 0 }}>
-            {error}
-          </p>
-        )}
+          {error && (
+            <p className="form-error" style={{ marginTop: 0 }}>
+              {error}
+            </p>
+          )}
 
-        <div className="art-list">
-          {sorted.map((d) => {
-            const assignment = d.asignados.find((a) => a.workerId === worker.id);
-            const firmado = !!assignment?.firmadoEn;
-            const pdfKey = assignment ? `${d.id}_${assignment.workerId}_${assignment.token}` : null;
+          <div className="art-list">
+            {sorted.map((d) => {
+              const assignment = d.asignados.find((a) => a.workerId === worker.id);
+              const firmado = !!assignment?.firmadoEn;
+              const pdfKey = assignment ? `${d.id}_${assignment.workerId}_${assignment.token}` : null;
 
-            return (
-              <div key={d.id} className="art-item">
-                <div className="art-main">
-                  <div className="art-date">{formatDate(d.fecha)}</div>
+              return (
+                <div key={d.id} className="art-item">
+                  <div className="art-main">
+                    <div className="art-date">{formatDate(d.fecha)}</div>
 
-                  <div>
-                    <strong>{d.titulo}</strong>
-                    <div className="art-meta">{d.obra}</div>
-                    {d.categoria && <div className="art-meta">Categoría: {d.categoria}</div>}
-                    <div className="art-meta">Archivo: {d.attachment.fileName}</div>
-                    {firmado && assignment?.firmadoEn && (
-                      <div className="art-meta">Firmado: {formatDateTime(assignment.firmadoEn)}</div>
-                    )}
+                    <div>
+                      <strong>{d.titulo}</strong>
+                      <div className="art-meta">{d.obra}</div>
+                      {d.categoria && <div className="art-meta">Categoría: {d.categoria}</div>}
+                      <div className="art-meta">Archivo: {d.attachment.fileName}</div>
+                      {firmado && assignment?.firmadoEn && (
+                        <div className="art-meta">Firmado: {formatDateTime(assignment.firmadoEn)}</div>
+                      )}
+                    </div>
                   </div>
-                </div>
 
-                {firmado ? (
-                  <div className="flex" style={{ gap: 8, alignItems: "center" }}>
-                    <span className="art-status">Firmado</span>
-                    {assignment && (
+                  {firmado ? (
+                    <div className="flex" style={{ gap: 8, alignItems: "center" }}>
+                      <span className="art-status">Firmado</span>
+                      {assignment && (
+                        <button
+                          type="button"
+                          className="btn-secondary"
+                          disabled={downloadingKey === pdfKey}
+                          onClick={async () => {
+                            if (!assignment) return;
+                            setError("");
+                            setDownloadingKey(pdfKey);
+                            try {
+                              const rec = await getSignedDocumentPdfByKey({
+                                documentId: d.id,
+                                workerId: assignment.workerId,
+                                token: assignment.token,
+                              });
+                              if (!rec) {
+                                throw new Error("No se encontró el PDF firmado");
+                              }
+                              downloadBlobAsFile(rec.pdf, rec.fileName);
+                            } catch (e) {
+                              const msg = e instanceof Error ? e.message : "No se pudo descargar";
+                              setError(msg);
+                            } finally {
+                              setDownloadingKey(null);
+                            }
+                          }}
+                          style={{ padding: "0.35rem 0.6rem", fontSize: "0.85rem" }}
+                        >
+                          {downloadingKey === pdfKey ? "Descargando..." : "Descargar PDF"}
+                        </button>
+                      )}
+                    </div>
+                  ) : (
+                    <div className="flex" style={{ gap: 8, alignItems: "center" }}>
                       <button
                         type="button"
                         className="btn-secondary"
-                        disabled={downloadingKey === pdfKey}
-                        onClick={async () => {
-                          if (!assignment) return;
-                          setError("");
-                          setDownloadingKey(pdfKey);
-                          try {
-                            const rec = await getSignedDocumentPdfByKey({
-                              documentId: d.id,
-                              workerId: assignment.workerId,
-                              token: assignment.token,
-                            });
-                            if (!rec) {
-                              throw new Error("No se encontró el PDF firmado");
-                            }
-                            downloadBlobAsFile(rec.pdf, rec.fileName);
-                          } catch (e) {
-                            const msg = e instanceof Error ? e.message : "No se pudo descargar";
-                            setError(msg);
-                          } finally {
-                            setDownloadingKey(null);
-                          }
-                        }}
+                        onClick={() => downloadBlobAsFile(d.attachment.blob, d.attachment.fileName)}
                         style={{ padding: "0.35rem 0.6rem", fontSize: "0.85rem" }}
                       >
-                        {downloadingKey === pdfKey ? "Descargando..." : "Descargar PDF"}
+                        Ver archivo
                       </button>
-                    )}
-                  </div>
-                ) : (
-                  <div className="flex" style={{ gap: 8, alignItems: "center" }}>
-                    <button
-                      type="button"
-                      className="btn-secondary"
-                      onClick={() => downloadBlobAsFile(d.attachment.blob, d.attachment.fileName)}
-                      style={{ padding: "0.35rem 0.6rem", fontSize: "0.85rem" }}
-                    >
-                      Ver archivo
-                    </button>
 
-                    <button
-                      type="button"
-                      className="btn-primary"
-                      onClick={() => handleOpenSign(d)}
-                      disabled={signingId === d.id}
-                      style={{ padding: "0.35rem 0.6rem", fontSize: "0.85rem" }}
-                    >
-                      {signingId === d.id ? "Firmando..." : "Firmar"}
-                    </button>
-                  </div>
-                )}
-              </div>
-            );
-          })}
+                      <button
+                        type="button"
+                        className="btn-primary"
+                        onClick={() => handleOpenSign(d)}
+                        disabled={signingId === d.id}
+                        style={{ padding: "0.35rem 0.6rem", fontSize: "0.85rem" }}
+                      >
+                        {signingId === d.id ? "Firmando..." : "Firmar"}
+                      </button>
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+          </div>
         </div>
-      </div>
 
-      <SignatureModal
-        open={!!pendingSignDoc}
-        title="Firma de documento"
-        subtitle={
-          pendingSignDoc
-            ? `${pendingSignDoc.titulo} · ${pendingSignDoc.obra} · ${formatDate(pendingSignDoc.fecha)}`
-            : undefined
-        }
-        onCancel={() => {
-          if (signingId) return;
-          setPendingSignDoc(null);
-        }}
-        onConfirm={handleConfirmSign}
-      />
+        <SignatureModal
+          open={!!pendingSignDoc}
+          title="Firma de documento"
+          subtitle={
+            pendingSignDoc
+              ? `${pendingSignDoc.titulo} · ${pendingSignDoc.obra} · ${formatDate(pendingSignDoc.fecha)}`
+              : undefined
+          }
+          onCancel={() => {
+            if (signingId) return;
+            setPendingSignDoc(null);
+          }}
+          onConfirm={handleConfirmSign}
+        />
       </div>
     </div>
   );
