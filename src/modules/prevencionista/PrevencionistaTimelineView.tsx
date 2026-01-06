@@ -38,17 +38,25 @@ function typeIcon(type: WorkerActivity["type"]) {
   }
 }
 
-function formatDate(d: Date) {
-  const t = d.getTime();
-  if (Number.isNaN(t)) return "(sin fecha)";
-  return d.toLocaleString("es-CL");
+function formatDate(d: Date | string) {
+  try {
+    const date = new Date(d);
+    if (Number.isNaN(date.getTime())) return "(sin fecha)";
+    return date.toLocaleString("es-CL");
+  } catch {
+    return "(sin fecha)";
+  }
 }
 
-function formatOptionalDate(d: Date | undefined) {
+function formatOptionalDate(d: Date | string | undefined | null) {
   if (!d) return "(sin fecha)";
-  const t = d.getTime();
-  if (Number.isNaN(t)) return "(sin fecha)";
-  return d.toLocaleString("es-CL");
+  try {
+    const date = new Date(d);
+    if (Number.isNaN(date.getTime())) return "(sin fecha)";
+    return date.toLocaleString("es-CL");
+  } catch {
+    return "(sin fecha)";
+  }
 }
 
 export default function PrevencionistaTimelineView() {
