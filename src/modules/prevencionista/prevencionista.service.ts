@@ -32,11 +32,11 @@ export interface WorkerTimelineData {
   findingIncidents: FindingIncident[];
 }
 
- function safeDate(dateStr: string | undefined, fallback: Date) {
-   if (!dateStr) return fallback;
-   const d = new Date(dateStr);
-   return Number.isNaN(d.getTime()) ? fallback : d;
- }
+function safeDate(dateStr: string | undefined, fallback: Date) {
+  if (!dateStr) return fallback;
+  const d = new Date(dateStr);
+  return Number.isNaN(d.getTime()) ? fallback : d;
+}
 
 export async function getWorkerTimeline(workerId: string): Promise<WorkerTimelineData> {
   try {
@@ -160,7 +160,9 @@ export async function getWorkerTimeline(workerId: string): Promise<WorkerTimelin
 
 export async function getWorkersForPrevencionista(): Promise<Worker[]> {
   try {
-    return await getWorkers();
+    const { getCurrentUser } = await import("../auth/auth.service");
+    const user = await getCurrentUser();
+    return await getWorkers(user?.companyRut);
   } catch (error) {
     throw new Error('Error al obtener trabajadores para prevencionista');
   }
