@@ -241,6 +241,21 @@ async function stampSignatureOnPdfAttachment(params: {
     maxWidth: boxW - pad * 2,
   });
 
+  if (params.assignment.geo) {
+    const geo = params.assignment.geo;
+    const geoStr = `Lat: ${geo.lat.toFixed(5)}, Lng: ${geo.lng.toFixed(5)}`;
+    const accStr = geo.accuracy ? `(±${Math.round(geo.accuracy)}m)` : "";
+
+    lastPage.drawText(`${geoStr} ${accStr}`, {
+      x: x + pad,
+      y: dateY - 12,
+      size: 8,
+      font,
+      color: rgb(0.3, 0.3, 0.3),
+      maxWidth: boxW - pad * 2,
+    });
+  }
+
   const tokenShort = shortenToken(params.assignment.token);
   const tokenY = y + pad;
   const sigY = tokenY + 14;
@@ -314,15 +329,15 @@ export async function saveSignedIrlPdf(params: {
   const fileName =
     params.irl.attachment?.fileName && params.irl.attachment.mimeType === "application/pdf"
       ? buildSignedAttachmentFileName({
-          originalFileName: params.irl.attachment.fileName,
-          token: params.assignment.token,
-        })
+        originalFileName: params.irl.attachment.fileName,
+        token: params.assignment.token,
+      })
       : buildSignedIrlPdfFileName({
-          workerName: params.assignment.firmadoPorNombre ?? "trabajador",
-          workerRut: params.assignment.firmadoPorRut ?? "",
-          firmadoEn: params.assignment.firmadoEn,
-          token: params.assignment.token,
-        });
+        workerName: params.assignment.firmadoPorNombre ?? "trabajador",
+        workerRut: params.assignment.firmadoPorRut ?? "",
+        firmadoEn: params.assignment.firmadoEn,
+        token: params.assignment.token,
+      });
 
   const id = `${params.irl.id}_${params.assignment.workerId}_${params.assignment.token}`;
 
@@ -345,7 +360,7 @@ export async function saveSignedIrlPdf(params: {
     try {
       const obra = await db.table("obras").get(params.irl.obra);
       companyId = (obra as any)?.empresaId ?? null;
-    } catch {}
+    } catch { }
     await createNotification({
       type: "irl_signed",
       title: "IRL firmado",

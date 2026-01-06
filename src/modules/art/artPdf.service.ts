@@ -242,6 +242,21 @@ async function stampSignatureOnPdfAttachment(params: {
     maxWidth: boxW - pad * 2,
   });
 
+  if (params.assignment.geo) {
+    const geo = params.assignment.geo;
+    const geoStr = `Lat: ${geo.lat.toFixed(5)}, Lng: ${geo.lng.toFixed(5)}`;
+    const accStr = geo.accuracy ? `(±${Math.round(geo.accuracy)}m)` : "";
+
+    lastPage.drawText(`${geoStr} ${accStr}`, {
+      x: x + pad,
+      y: dateY - 12,
+      size: 8,
+      font,
+      color: rgb(0.3, 0.3, 0.3),
+      maxWidth: boxW - pad * 2,
+    });
+  }
+
   // Zona inferior (token + firma) para que nunca choque con los datos
   const tokenShort = shortenToken(params.assignment.token);
   const tokenY = y + pad;
@@ -305,12 +320,12 @@ export async function saveSignedArtPdf(params: {
 
   const fileName =
     params.art.attachment?.fileName &&
-    isPdfAttachment(params.art.attachment.fileName, params.art.attachment.mimeType)
-    ? buildSignedAttachmentFileName({
+      isPdfAttachment(params.art.attachment.fileName, params.art.attachment.mimeType)
+      ? buildSignedAttachmentFileName({
         originalFileName: params.art.attachment.fileName,
         token: params.assignment.token,
       })
-    : buildSignedArtPdfFileName({
+      : buildSignedArtPdfFileName({
         workerName: params.assignment.firmadoPorNombre ?? "trabajador",
         workerRut: params.assignment.firmadoPorRut ?? "",
         firmadoEn: params.assignment.firmadoEn,
@@ -338,7 +353,7 @@ export async function saveSignedArtPdf(params: {
     try {
       const obra = await db.table("obras").get((params.art as any).obra);
       companyId = (obra as any)?.empresaId ?? null;
-    } catch {}
+    } catch { }
     await createNotification({
       type: "art_signed",
       title: "ART firmada",

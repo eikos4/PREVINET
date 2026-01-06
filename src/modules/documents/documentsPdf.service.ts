@@ -243,6 +243,21 @@ async function stampSignatureOnPdfAttachment(params: {
     maxWidth: boxW - pad * 2,
   });
 
+  if (params.assignment.geo) {
+    const geo = params.assignment.geo;
+    const geoStr = `Lat: ${geo.lat.toFixed(5)}, Lng: ${geo.lng.toFixed(5)}`;
+    const accStr = geo.accuracy ? `(±${Math.round(geo.accuracy)}m)` : "";
+
+    lastPage.drawText(`${geoStr} ${accStr}`, {
+      x: x + pad,
+      y: dateY - 12, // Debajo de la fecha
+      size: 8,
+      font,
+      color: rgb(0.3, 0.3, 0.3),
+      maxWidth: boxW - pad * 2,
+    });
+  }
+
   const tokenShort = shortenToken(params.assignment.token);
   const tokenY = y + pad;
   const sigY = tokenY + 14;
@@ -316,16 +331,16 @@ export async function saveSignedDocumentPdf(params: {
   const fileName =
     params.document.attachment?.fileName && params.document.attachment.mimeType === "application/pdf"
       ? buildSignedAttachmentFileName({
-          originalFileName: params.document.attachment.fileName,
-          token: params.assignment.token,
-        })
+        originalFileName: params.document.attachment.fileName,
+        token: params.assignment.token,
+      })
       : buildSignedDocumentPdfFileName({
-          titulo: params.document.titulo,
-          workerName: params.assignment.firmadoPorNombre ?? "trabajador",
-          workerRut: params.assignment.firmadoPorRut ?? "",
-          firmadoEn: params.assignment.firmadoEn,
-          token: params.assignment.token,
-        });
+        titulo: params.document.titulo,
+        workerName: params.assignment.firmadoPorNombre ?? "trabajador",
+        workerRut: params.assignment.firmadoPorRut ?? "",
+        firmadoEn: params.assignment.firmadoEn,
+        token: params.assignment.token,
+      });
 
   const id = `${params.document.id}_${params.assignment.workerId}_${params.assignment.token}`;
 
@@ -348,7 +363,7 @@ export async function saveSignedDocumentPdf(params: {
     try {
       const obra = await db.table("obras").get((params.document as any).obra);
       companyId = (obra as any)?.empresaId ?? null;
-    } catch {}
+    } catch { }
     await createNotification({
       type: "document_signed",
       title: "Documento firmado",
