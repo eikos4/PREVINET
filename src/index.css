@@ -1448,6 +1448,29 @@ body {
   color: #64748b;
 }
 
+@media (max-width: 768px) {
+  .dashboard-pro-module-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .dashboard-pro-pending-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .dashboard-pro-panel {
+    padding: 0.75rem;
+  }
+
+  .dashboard-pro-panel-title {
+    font-size: 0.95rem;
+  }
+
+  .dashboard-pro-table-secondary {
+    font-size: 0.75rem;
+    word-break: break-word;
+  }
+}
+
 @media (max-width: 520px) {
   .dashboard-pro-header {
     flex-direction: column;
@@ -1459,6 +1482,10 @@ body {
     gap: 0.4rem;
   }
 
+  .dashboard-pro-bar-label {
+    font-size: 0.8rem;
+  }
+
   .dashboard-pro-bar-value {
     text-align: left;
   }
@@ -1466,10 +1493,51 @@ body {
   .dashboard-pro-table-head,
   .dashboard-pro-table-row {
     grid-template-columns: 1fr;
+    gap: 0.5rem;
+  }
+
+  .dashboard-pro-table-head {
+    padding: 0.6rem;
+  }
+
+  .dashboard-pro-table-row {
+    padding: 0.6rem;
   }
 
   .dashboard-pro-pill {
     justify-self: start;
+    margin-top: 0.25rem;
+  }
+
+  .dashboard-pro-table-primary {
+    font-size: 0.9rem;
+  }
+
+  .dashboard-pro-table-secondary {
+    font-size: 0.75rem;
+    line-height: 1.4;
+    word-break: break-word;
+    overflow-wrap: break-word;
+  }
+
+  .dashboard-pro-mini-primary {
+    font-size: 0.85rem;
+  }
+
+  .dashboard-pro-mini-secondary {
+    font-size: 0.75rem;
+    word-break: break-word;
+  }
+
+  .dashboard-pro-alert-item {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.5rem;
+  }
+
+  .dashboard-pro-module-meta {
+    font-size: 0.75rem;
+    line-height: 1.4;
   }
 }
 
