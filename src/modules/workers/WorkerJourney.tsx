@@ -8,20 +8,20 @@ import { useMemo } from "react";
 export type WorkerJourneyStepKey = "fitForWork" | "art" | "irl" | "talks";
 
 interface StepStatus {
-  total: number;
-  pending: number;
+  total: number;
+  pending: number;
 }
 
 export interface WorkerJourneyStatus {
-  currentStep: WorkerJourneyStepKey | "done";
-  steps: Record<WorkerJourneyStepKey, StepStatus>;
+  currentStep: WorkerJourneyStepKey | "done";
+  steps: Record<WorkerJourneyStepKey, StepStatus>;
 }
 
 export interface Worker {
-  nombre: string;
-  cargo: string;
-  obra: string;
-  id: string;
+  nombre: string;
+  cargo: string;
+  obra: string;
+  id: string;
 }
 
 // =========================================================
@@ -112,39 +112,39 @@ export default function WorkerJourney({ worker, status, loading, error, onRefres
       actionLabel: string;
       actionSection: "fitForWork" | "art" | "irl" | "talks";
     }> = [
-      {
-        key: "fitForWork",
-        title: "Evaluación Fit-for-Work",
-        subtitle: "Evaluación diaria (Estado de salud de hoy)",
-        icon: "fitForWork",
-        actionLabel: "Completar Evaluación",
-        actionSection: "fitForWork",
-      },
-      {
-        key: "art",
-        title: "Análisis de Riesgo (ART/AST)",
-        subtitle: "Documentos de la jornada a firmar",
-        icon: "art",
-        actionLabel: "Firmar ART",
-        actionSection: "art",
-      },
-      {
-        key: "irl",
-        title: "Instrucción de Riesgo Específico (IRL)",
-        subtitle: "Lectura, preguntas y firma de documentos",
-        icon: "irl",
-        actionLabel: "Revisar IRL",
-        actionSection: "irl",
-      },
-      {
-        key: "talks",
-        title: "Charlas de Seguridad",
-        subtitle: "Charlas diarias o asignadas",
-        icon: "talks",
-        actionLabel: "Firmar Charlas",
-        actionSection: "talks",
-      },
-    ];
+        {
+          key: "fitForWork",
+          title: "Evaluación Fit-for-Work",
+          subtitle: "Evaluación diaria (Estado de salud de hoy)",
+          icon: "fitForWork",
+          actionLabel: "Completar Evaluación",
+          actionSection: "fitForWork",
+        },
+        {
+          key: "art",
+          title: "Análisis de Riesgo (ART/AST)",
+          subtitle: "Documentos de la jornada a firmar",
+          icon: "art",
+          actionLabel: "Firmar ART",
+          actionSection: "art",
+        },
+        {
+          key: "irl",
+          title: "Instrucción de Riesgo Específico (IRL)",
+          subtitle: "Lectura, preguntas y firma de documentos",
+          icon: "irl",
+          actionLabel: "Revisar IRL",
+          actionSection: "irl",
+        },
+        {
+          key: "talks",
+          title: "Charlas de Seguridad",
+          subtitle: "Charlas diarias o asignadas",
+          icon: "talks",
+          actionLabel: "Firmar Charlas",
+          actionSection: "talks",
+        },
+      ];
     return list;
   }, []);
 
@@ -157,48 +157,55 @@ export default function WorkerJourney({ worker, status, loading, error, onRefres
   // --- FIN LÓGICA DE DATOS ---
 
   return (
-    <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-4 sm:py-8 space-y-6">
-      <div className="bg-white rounded-2xl shadow-2xl border border-gray-100 overflow-hidden">
+    <div className="max-w-6xl mx-auto px-2 sm:px-6 lg:px-8 py-3 sm:py-8 space-y-4 sm:space-y-6">
+      <div className="bg-white rounded-xl sm:rounded-2xl shadow-lg sm:shadow-2xl border border-gray-100 overflow-hidden">
+        {/* Header Section */}
         <div className="bg-slate-800 px-4 py-4 sm:px-6 sm:py-5">
-          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
-            <div className="min-w-0">
-              <h3 className="text-xl sm:text-2xl font-extrabold text-white m-0 truncate">Inicia tu Jornada Hoy</h3>
-              <p className="text-xs sm:text-sm text-blue-200 mt-1 m-0 truncate">
-                {worker.nombre} · {worker.cargo} · {worker.obra}
+          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+            <div className="min-w-0 w-full sm:w-auto">
+              <h3 className="text-xl sm:text-2xl font-extrabold text-white m-0 leading-tight">
+                Inicia tu Jornada
+              </h3>
+              <p className="text-sm text-blue-200 mt-1 m-0 truncate">
+                {worker.nombre}
+              </p>
+              <p className="text-xs text-blue-300 m-0 truncate">
+                {worker.cargo} · {worker.obra}
               </p>
             </div>
 
             <button
               type="button"
-              className="flex items-center gap-1.5 px-3 py-1.5 sm:px-3.5 sm:py-2 text-sm font-medium rounded-lg text-white bg-blue-600 hover:bg-blue-700 transition-colors disabled:opacity-70 shadow-md flex-shrink-0"
+              className="w-full sm:w-auto flex items-center justify-center gap-2 px-4 py-2 text-sm font-medium rounded-lg text-white bg-blue-600 hover:bg-blue-700 transition-colors disabled:opacity-70 shadow-md"
               onClick={onRefresh}
               disabled={loading}
             >
               <StepIcons.Refresh />
-              {loading ? "Actualizando..." : "Actualizar"}
+              {loading ? "Actualizando..." : "Actualizar datos"}
             </button>
           </div>
         </div>
 
-        <div className="p-4 sm:p-6 space-y-6">
+        <div className="p-3 sm:p-6 space-y-4 sm:space-y-6">
+          {/* Progress Section */}
           <div className="rounded-xl border border-blue-200 bg-blue-50 p-4">
             <div className="flex justify-between items-center gap-3">
               <div>
-                <div className="text-base font-bold text-blue-800">Progreso Diario</div>
-                <div className="text-sm text-blue-700 mt-0.5">
+                <div className="text-sm sm:text-base font-bold text-blue-800">Progreso Diario</div>
+                <div className="text-xs sm:text-sm text-blue-700 mt-0.5 leading-snug">
                   {status?.currentStep === "done"
-                    ? "Jornada completada con éxito. ¡A trabajar!"
-                    : "Completa los pasos en orden para habilitar el siguiente."}
+                    ? "¡Jornada completada! Todo listo."
+                    : "Sigue los pasos en orden."}
                 </div>
               </div>
-              <div className="text-lg font-extrabold text-blue-900 flex-shrink-0">
+              <div className="text-lg font-extrabold text-blue-900 flex-shrink-0 bg-white px-3 py-1 rounded-lg border border-blue-100 shadow-sm">
                 {doneCount}/{steps.length}
               </div>
             </div>
 
-            <div className="mt-3 h-2.5 bg-blue-200 rounded-full overflow-hidden">
+            <div className="mt-3 h-3 bg-blue-200 rounded-full overflow-hidden border border-blue-200/50">
               <div
-                className="h-full rounded-full transition-all duration-500 ease-out"
+                className="h-full rounded-full transition-all duration-500 ease-out shadow-[0_0_10px_rgba(59,130,246,0.5)]"
                 style={{
                   width: `${Math.round((doneCount / steps.length) * 100)}%`,
                   background: "linear-gradient(90deg, #3b82f6, #0ea5e9)",
@@ -209,11 +216,14 @@ export default function WorkerJourney({ worker, status, loading, error, onRefres
 
           {error && (
             <div className="p-4 rounded-xl bg-red-50 border border-red-300">
-              <p className="text-sm text-red-700 font-medium">⚠️ Error al cargar el estado: {error}</p>
+              <p className="text-sm text-red-700 font-medium flex items-center gap-2">
+                <span>⚠️</span> Error: {error}
+              </p>
             </div>
           )}
 
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
+          {/* Steps Grid */}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-3 sm:gap-4">
             {steps.map((s, idx) => {
               const counts = status?.steps[s.key] ?? { pending: 0, total: 0 };
               const completed = counts.pending === 0;
@@ -226,67 +236,74 @@ export default function WorkerJourney({ worker, status, loading, error, onRefres
                 "border",
                 "p-4",
                 "transition-all",
-                "duration-300",
-                active ? "border-blue-500 bg-blue-50 shadow-lg transform scale-[1.01]" : "border-gray-200 bg-white hover:shadow-sm",
-                locked ? "opacity-50 pointer-events-none" : "",
+                "duration-200",
+                active
+                  ? "border-blue-500 bg-blue-50/50 shadow-md ring-1 ring-blue-500/20"
+                  : "border-gray-200 bg-white shadow-sm",
+                locked ? "opacity-60 grayscale-[0.5]" : "",
               ]
                 .filter(Boolean)
                 .join(" ");
 
-              const statusTagClasses = completed
-                ? "bg-green-100 text-green-700 border-green-300"
-                : "bg-red-100 text-red-700 border-red-300";
-
               return (
                 <div key={s.key} className={cardClasses}>
-                  <div className="flex flex-col sm:flex-row justify-between gap-4 items-start sm:items-center">
-                    <div className="flex gap-4 items-start flex-1 min-w-0">
+                  <div className="flex flex-col gap-4">
+                    {/* Top Part: Icon + Texts */}
+                    <div className="flex gap-3 items-start">
                       <div
-                        className={`w-10 h-10 flex items-center justify-center rounded-lg border flex-shrink-0 ${
-                          active ? "bg-blue-100 border-blue-400" : "bg-gray-100 border-gray-200"
-                        }`}
+                        className={`w-12 h-12 flex items-center justify-center rounded-xl border flex-shrink-0 shadow-sm ${active ? "bg-blue-100 border-blue-300 text-blue-600" : "bg-gray-50 border-gray-200 text-gray-500"
+                          }`}
                       >
-                        <IconComponent />
+                        <div className="scale-110"><IconComponent /></div>
                       </div>
 
-                      <div className="pt-0.5 min-w-0">
-                        <div className="text-base font-bold text-gray-900 flex items-center truncate">
-                          {idx + 1}. {s.title}
+                      <div className="flex-1 min-w-0 pt-0.5">
+                        <div className="flex flex-wrap items-center gap-2 mb-1">
+                          <span className={`text-sm sm:text-base font-bold ${active ? 'text-blue-900' : 'text-gray-800'}`}>
+                            {idx + 1}. {s.title}
+                          </span>
+
                           {active && (
-                            <span className="ml-3 px-2 py-0.5 text-xs font-semibold bg-blue-600 text-white rounded-full hidden sm:inline-block">
-                              ACTUAL
+                            <span className="px-2 py-0.5 text-[10px] uppercase font-bold bg-blue-600 text-white rounded-full tracking-wide shadow-sm">
+                              Actual
                             </span>
                           )}
                           {completed && !active && (
-                            <span className="ml-3 px-2 py-0.5 text-xs font-semibold bg-green-500 text-white rounded-full hidden sm:inline-block">
-                              ✓ LISTO
+                            <span className="px-2 py-0.5 text-[10px] uppercase font-bold bg-green-500 text-white rounded-full tracking-wide shadow-sm">
+                              Listo
                             </span>
                           )}
                         </div>
 
-                        <div className="text-sm text-gray-600 mt-0.5 truncate">{s.subtitle}</div>
+                        <div className="text-xs sm:text-sm text-gray-500 leading-snug mb-2">
+                          {s.subtitle}
+                        </div>
 
-                        <div className={`mt-2 px-3 py-1 text-xs font-medium rounded-full border w-fit ${statusTagClasses}`}>
+                        {/* Status Chip Inline */}
+                        <div className={`inline-flex items-center px-2.5 py-0.5 text-xs font-medium rounded-md border ${completed
+                            ? "bg-green-50 text-green-700 border-green-200"
+                            : "bg-orange-50 text-orange-700 border-orange-200"
+                          }`}>
                           {counts.total === 0
                             ? "Sin asignaciones"
                             : completed
-                              ? "Sin pendientes (Completado)"
-                              : `${counts.pending} pendiente(s) de ${counts.total}`}
+                              ? "Completado"
+                              : `${counts.pending} pendiente(s)`}
                         </div>
                       </div>
                     </div>
 
+                    {/* Bottom Part: Action Button */}
                     <button
                       type="button"
-                      className={`mt-3 sm:mt-0 w-full sm:w-auto flex-shrink-0 px-4 py-2 text-sm font-medium rounded-lg transition-colors ${
-                        active && !completed
-                          ? "bg-blue-600 text-white hover:bg-blue-700 shadow-md"
-                          : "bg-blue-100 text-blue-700 hover:bg-blue-200"
-                      } disabled:opacity-50 disabled:shadow-none`}
+                      className={`w-full py-2.5 px-4 text-sm font-bold rounded-lg transition-all active:scale-[0.98] ${active && !completed
+                          ? "bg-blue-600 text-white shadow-blue-500/30 shadow-lg hover:bg-blue-700"
+                          : "bg-slate-100 text-slate-600 border border-slate-200 hover:bg-slate-200"
+                        } disabled:opacity-50 disabled:shadow-none disabled:active:scale-100`}
                       onClick={() => onGoTo(s.actionSection)}
                       disabled={locked}
                     >
-                      {s.actionLabel}
+                      {locked ? "Bloqueado" : s.actionLabel}
                     </button>
                   </div>
                 </div>
@@ -294,19 +311,14 @@ export default function WorkerJourney({ worker, status, loading, error, onRefres
             })}
           </div>
 
-          <div className="mt-6 rounded-xl border border-gray-200 bg-gray-50 p-4 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
-            <div>
-              <div className="text-sm font-bold text-gray-800">Mi Perfil</div>
-              <div className="text-sm text-gray-600 mt-0.5">Revisa tu estado, documentos firmados y datos laborales.</div>
-            </div>
-
+          <div className="mt-4 pt-4 border-t border-gray-100">
             <button
               type="button"
-              className="mt-2 sm:mt-0 w-full sm:w-auto flex items-center justify-center sm:justify-start px-4 py-2 text-sm font-medium rounded-lg text-blue-700 bg-white border border-blue-300 hover:bg-blue-50 transition-colors shadow-sm"
+              className="w-full flex items-center justify-center gap-2 px-4 py-3 text-sm font-medium rounded-xl text-gray-600 bg-gray-50 border border-gray-200 hover:bg-gray-100 transition-colors"
               onClick={() => onGoTo("profile")}
             >
               <StepIcons.Profile />
-              Ir a Mi perfil
+              Ver Mi Perfil completo
             </button>
           </div>
         </div>
