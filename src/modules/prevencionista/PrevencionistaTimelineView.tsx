@@ -227,7 +227,11 @@ export default function PrevencionistaTimelineView() {
       }
     });
 
-    events.sort((a, b) => (b.when?.getTime() ?? 0) - (a.when?.getTime() ?? 0));
+    events.sort((a, b) => {
+      const timeA = a.when ? new Date(a.when).getTime() : 0;
+      const timeB = b.when ? new Date(b.when).getTime() : 0;
+      return timeB - timeA;
+    });
     return events;
   }, [timeline]);
 
@@ -296,132 +300,132 @@ export default function PrevencionistaTimelineView() {
             </div>
 
             <div className="flex gap-2 flex-wrap mb-5">
-            <button
-              type="button"
-              className={tabClass("info")}
-              onClick={() => setActiveTab("info")}
-            >
-              Info
-            </button>
-            <button
-              type="button"
-              className={tabClass("activities")}
-              onClick={() => setActiveTab("activities")}
-            >
-              Actividades
-            </button>
-            <button
-              type="button"
-              className={tabClass("signatures")}
-              onClick={() => setActiveTab("signatures")}
-            >
-              Firmas
-            </button>
+              <button
+                type="button"
+                className={tabClass("info")}
+                onClick={() => setActiveTab("info")}
+              >
+                Info
+              </button>
+              <button
+                type="button"
+                className={tabClass("activities")}
+                onClick={() => setActiveTab("activities")}
+              >
+                Actividades
+              </button>
+              <button
+                type="button"
+                className={tabClass("signatures")}
+                onClick={() => setActiveTab("signatures")}
+              >
+                Firmas
+              </button>
             </div>
 
-          {activeTab === "info" && (
-            <div className="rounded-xl border border-slate-200 bg-white p-5">
-              <div className="grid gap-2 text-sm">
-                <div className="flex gap-2"><span className="font-semibold text-slate-900">Nombre:</span><span className="text-slate-700">{timeline.worker.nombre}</span></div>
-                <div className="flex gap-2"><span className="font-semibold text-slate-900">RUT:</span><span className="text-slate-700">{timeline.worker.rut}</span></div>
-                <div className="flex gap-2"><span className="font-semibold text-slate-900">Cargo:</span><span className="text-slate-700">{timeline.worker.cargo}</span></div>
-                <div className="flex gap-2"><span className="font-semibold text-slate-900">Obra:</span><span className="text-slate-700">{timeline.worker.obra}</span></div>
-                <div className="flex gap-2"><span className="font-semibold text-slate-900">Empresa:</span><span className="text-slate-700">{timeline.worker.empresaNombre} {timeline.worker.empresaRut ? `(${timeline.worker.empresaRut})` : ""}</span></div>
-                <div className="flex gap-2"><span className="font-semibold text-slate-900">Teléfono:</span><span className="text-slate-700">{timeline.worker.telefono || "(sin teléfono)"}</span></div>
-                <div className="flex gap-2"><span className="font-semibold text-slate-900">Habilitado:</span><span className="text-slate-700">{timeline.worker.habilitado ? "Sí" : "No"}</span></div>
-                <div className="flex gap-2"><span className="font-semibold text-slate-900">Enrolamiento firmado:</span><span className="text-slate-700">{formatOptionalDate(timeline.worker.enrolamientoFirmadoEn)}</span></div>
-                <div className="flex gap-2"><span className="font-semibold text-slate-900">Adjunto IRL:</span><span className="text-slate-700">{timeline.worker.irlAdjunto?.fileName ? timeline.worker.irlAdjunto.fileName : "(sin adjunto)"}</span></div>
-                <div className="flex gap-2"><span className="font-semibold text-slate-900">Adjunto Aptitud:</span><span className="text-slate-700">{timeline.worker.aptitudAdjunto?.fileName ? timeline.worker.aptitudAdjunto.fileName : "(sin adjunto)"}</span></div>
+            {activeTab === "info" && (
+              <div className="rounded-xl border border-slate-200 bg-white p-5">
+                <div className="grid gap-2 text-sm">
+                  <div className="flex gap-2"><span className="font-semibold text-slate-900">Nombre:</span><span className="text-slate-700">{timeline.worker.nombre}</span></div>
+                  <div className="flex gap-2"><span className="font-semibold text-slate-900">RUT:</span><span className="text-slate-700">{timeline.worker.rut}</span></div>
+                  <div className="flex gap-2"><span className="font-semibold text-slate-900">Cargo:</span><span className="text-slate-700">{timeline.worker.cargo}</span></div>
+                  <div className="flex gap-2"><span className="font-semibold text-slate-900">Obra:</span><span className="text-slate-700">{timeline.worker.obra}</span></div>
+                  <div className="flex gap-2"><span className="font-semibold text-slate-900">Empresa:</span><span className="text-slate-700">{timeline.worker.empresaNombre} {timeline.worker.empresaRut ? `(${timeline.worker.empresaRut})` : ""}</span></div>
+                  <div className="flex gap-2"><span className="font-semibold text-slate-900">Teléfono:</span><span className="text-slate-700">{timeline.worker.telefono || "(sin teléfono)"}</span></div>
+                  <div className="flex gap-2"><span className="font-semibold text-slate-900">Habilitado:</span><span className="text-slate-700">{timeline.worker.habilitado ? "Sí" : "No"}</span></div>
+                  <div className="flex gap-2"><span className="font-semibold text-slate-900">Enrolamiento firmado:</span><span className="text-slate-700">{formatOptionalDate(timeline.worker.enrolamientoFirmadoEn)}</span></div>
+                  <div className="flex gap-2"><span className="font-semibold text-slate-900">Adjunto IRL:</span><span className="text-slate-700">{timeline.worker.irlAdjunto?.fileName ? timeline.worker.irlAdjunto.fileName : "(sin adjunto)"}</span></div>
+                  <div className="flex gap-2"><span className="font-semibold text-slate-900">Adjunto Aptitud:</span><span className="text-slate-700">{timeline.worker.aptitudAdjunto?.fileName ? timeline.worker.aptitudAdjunto.fileName : "(sin adjunto)"}</span></div>
+                </div>
               </div>
-            </div>
-          )}
+            )}
 
-          {activeTab === "activities" && (
-            <div>
-              {timeline.activities.length === 0 ? (
-                <p className="text-sm text-slate-500 m-0">
-                  No hay actividades registradas para este trabajador.
-                </p>
-              ) : (
-                <div className="grid gap-4">
-                  {grouped.map(([day, items]) => (
-                    <div key={day}>
-                      <div className="font-semibold text-slate-900 mb-2">{day}</div>
+            {activeTab === "activities" && (
+              <div>
+                {timeline.activities.length === 0 ? (
+                  <p className="text-sm text-slate-500 m-0">
+                    No hay actividades registradas para este trabajador.
+                  </p>
+                ) : (
+                  <div className="grid gap-4">
+                    {grouped.map(([day, items]) => (
+                      <div key={day}>
+                        <div className="font-semibold text-slate-900 mb-2">{day}</div>
 
-                      <div className="grid gap-3">
-                        {items.map((a) => (
-                          <div
-                            key={`${a.type}-${a.id}`}
-                            className="rounded-xl border border-slate-200 bg-white p-4"
-                          >
-                            <div className="flex gap-3">
-                              <div className="text-xl leading-none">{typeIcon(a.type)}</div>
+                        <div className="grid gap-3">
+                          {items.map((a) => (
+                            <div
+                              key={`${a.type}-${a.id}`}
+                              className="rounded-xl border border-slate-200 bg-white p-4"
+                            >
+                              <div className="flex gap-3">
+                                <div className="text-xl leading-none">{typeIcon(a.type)}</div>
 
-                              <div className="flex-1 min-w-0">
-                                <div className="flex items-start justify-between gap-4">
-                                  <div>
-                                    <div className="font-semibold text-slate-900">{a.title}</div>
-                                    <div className="text-sm text-slate-600 mt-1">
-                                      {typeLabel(a.type)}
-                                      {a.status ? ` · ${a.status}` : ""}
+                                <div className="flex-1 min-w-0">
+                                  <div className="flex items-start justify-between gap-4">
+                                    <div>
+                                      <div className="font-semibold text-slate-900">{a.title}</div>
+                                      <div className="text-sm text-slate-600 mt-1">
+                                        {typeLabel(a.type)}
+                                        {a.status ? ` · ${a.status}` : ""}
+                                      </div>
+                                    </div>
+
+                                    <div className="text-sm text-slate-500 whitespace-nowrap">
+                                      {formatDate(a.date)}
                                     </div>
                                   </div>
 
-                                  <div className="text-sm text-slate-500 whitespace-nowrap">
-                                    {formatDate(a.date)}
+                                  <div className="text-sm text-slate-800 mt-2">
+                                    {a.description}
                                   </div>
-                                </div>
-
-                                <div className="text-sm text-slate-800 mt-2">
-                                  {a.description}
                                 </div>
                               </div>
                             </div>
-                          </div>
-                        ))}
+                          ))}
+                        </div>
                       </div>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
-          )}
-
-          {activeTab === "signatures" && (
-            <div>
-              {signatureSummary && (
-                <div className="rounded-xl border border-slate-200 bg-white p-5 mb-4">
-                  <div className="grid gap-2 text-sm">
-                    <div className="flex gap-2"><span className="font-semibold text-slate-900">Enrolamiento:</span><span className="text-slate-700">{signatureSummary.enrollmentSigned ? "Firmado" : "Pendiente"}</span></div>
-                    <div className="flex gap-2"><span className="font-semibold text-slate-900">IRL:</span><span className="text-slate-700">{signatureSummary.irls.signed}/{signatureSummary.irls.total} firmados</span></div>
-                    <div className="flex gap-2"><span className="font-semibold text-slate-900">Charlas:</span><span className="text-slate-700">{signatureSummary.talks.signed}/{signatureSummary.talks.total} firmadas</span></div>
-                    <div className="flex gap-2"><span className="font-semibold text-slate-900">Fit-for-Work:</span><span className="text-slate-700">{signatureSummary.fitForWork.signed}/{signatureSummary.fitForWork.total} firmados</span></div>
-                    <div className="flex gap-2"><span className="font-semibold text-slate-900">ART/AST:</span><span className="text-slate-700">{signatureSummary.art.signed}/{signatureSummary.art.total} firmados</span></div>
+                    ))}
                   </div>
-                </div>
-              )}
+                )}
+              </div>
+            )}
 
-              {signatureEvents.length === 0 ? (
-                <p className="text-sm text-slate-500 m-0">
-                  No hay firmas registradas para este trabajador.
-                </p>
-              ) : (
-                <div className="grid gap-3">
-                  {signatureEvents.map((e) => (
-                    <div key={e.id} className="rounded-xl border border-slate-200 bg-white p-4">
-                      <div className="flex items-start justify-between gap-4">
-                        <div className="font-semibold text-slate-900">{e.label}</div>
-                        <div className="text-sm text-slate-500 whitespace-nowrap">{formatOptionalDate(e.when)}</div>
-                      </div>
-                      {e.extra && (
-                        <div className="mt-2 text-sm text-slate-600">{e.extra}</div>
-                      )}
+            {activeTab === "signatures" && (
+              <div>
+                {signatureSummary && (
+                  <div className="rounded-xl border border-slate-200 bg-white p-5 mb-4">
+                    <div className="grid gap-2 text-sm">
+                      <div className="flex gap-2"><span className="font-semibold text-slate-900">Enrolamiento:</span><span className="text-slate-700">{signatureSummary.enrollmentSigned ? "Firmado" : "Pendiente"}</span></div>
+                      <div className="flex gap-2"><span className="font-semibold text-slate-900">IRL:</span><span className="text-slate-700">{signatureSummary.irls.signed}/{signatureSummary.irls.total} firmados</span></div>
+                      <div className="flex gap-2"><span className="font-semibold text-slate-900">Charlas:</span><span className="text-slate-700">{signatureSummary.talks.signed}/{signatureSummary.talks.total} firmadas</span></div>
+                      <div className="flex gap-2"><span className="font-semibold text-slate-900">Fit-for-Work:</span><span className="text-slate-700">{signatureSummary.fitForWork.signed}/{signatureSummary.fitForWork.total} firmados</span></div>
+                      <div className="flex gap-2"><span className="font-semibold text-slate-900">ART/AST:</span><span className="text-slate-700">{signatureSummary.art.signed}/{signatureSummary.art.total} firmados</span></div>
                     </div>
-                  ))}
-                </div>
-              )}
-            </div>
-          )}
+                  </div>
+                )}
+
+                {signatureEvents.length === 0 ? (
+                  <p className="text-sm text-slate-500 m-0">
+                    No hay firmas registradas para este trabajador.
+                  </p>
+                ) : (
+                  <div className="grid gap-3">
+                    {signatureEvents.map((e) => (
+                      <div key={e.id} className="rounded-xl border border-slate-200 bg-white p-4">
+                        <div className="flex items-start justify-between gap-4">
+                          <div className="font-semibold text-slate-900">{e.label}</div>
+                          <div className="text-sm text-slate-500 whitespace-nowrap">{formatOptionalDate(e.when)}</div>
+                        </div>
+                        {e.extra && (
+                          <div className="mt-2 text-sm text-slate-600">{e.extra}</div>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
           </div>
         )}
       </div>
