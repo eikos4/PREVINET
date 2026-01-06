@@ -71,7 +71,7 @@ export async function analyzeWorkSiteImage(
                 "X-Title": "Previnet - AI Risk Analysis",
             },
             body: JSON.stringify({
-                model: "anthropic/claude-3.5-sonnet",
+                model: "google/gemini-2.0-flash-exp:free",
                 messages,
                 temperature: 0.7,
                 max_tokens: 1000,
@@ -128,7 +128,7 @@ export async function chatWithAssistant(
                 "X-Title": "Previnet - AI Assistant",
             },
             body: JSON.stringify({
-                model: "anthropic/claude-3.5-sonnet",
+                model: "google/gemini-2.0-flash-exp:free",
                 messages: formattedMessages,
                 temperature: 0.7,
                 max_tokens: 800,
