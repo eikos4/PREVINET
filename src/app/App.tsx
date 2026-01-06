@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 
 import Login from "../modules/auth/Login";
 import { getCurrentUser, logout } from "../modules/auth/auth.service";
+import { EliLogo } from "../components/icons/EliLogo";
 import type { User, UserRole } from "../modules/auth/auth.service";
 import { normalizeRole } from "../modules/auth/auth.service";
 
@@ -347,7 +348,7 @@ export default function App() {
         <InstallBanner />
         <div className="landing-shell">
           <div className="landing-card landing-hero">
-            <img className="landing-logo" src="/logo.png" alt="PreviNet" />
+            <EliLogo size={120} className="landing-logo" />
 
             <p className="landing-subtitle">
               Plataforma preventiva <strong>offline-first</strong>
@@ -430,7 +431,10 @@ export default function App() {
       {/* SIDEBAR */}
       <aside className={`sidebar ${menuOpen ? "open" : ""}`}>
         <div className="sidebar-header">
-          <div className="sidebar-brand">PreviNet</div>
+          <div className="sidebar-brand flex items-center gap-2">
+            <EliLogo size={32} />
+            <span>PreviNet</span>
+          </div>
           <div className="sidebar-meta">
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
               <div>

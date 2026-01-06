@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { EliLogo } from "./icons/EliLogo";
 
 declare global {
   interface BeforeInstallPromptEvent extends Event {
@@ -67,7 +68,7 @@ export default function InstallBanner() {
       <div className="install-banner-card">
         <div className="install-banner-content">
           <div className="install-banner-icon">
-            <img src="/logo.png" alt="App Icon" />
+            <EliLogo size={64} />
           </div>
           <div className="install-banner-text">
             {isIos() && !isInStandaloneMode() ? (

@@ -17,24 +17,10 @@ const ROLES: { id: UserRole; label: string; icon: string }[] = [
   { id: "superadmin", label: "Superadmin", icon: "👑" },
 ];
 
+import { EliLogo } from "../../components/icons/EliLogo";
+
 const PreventNetLogo = () => (
-  <svg
-    width="160"
-    height="160"
-    viewBox="0 0 120 120"
-    fill="none"
-    xmlns="http://www.w3.org/2000/svg"
-    className="login-logo"
-  >
-    <circle cx="60" cy="60" r="58" fill="#2563eb" fillOpacity="0.1" />
-    <circle cx="60" cy="60" r="50" stroke="#2563eb" strokeWidth="3" />
-    <path
-      d="M60 25 L75 45 L85 40 L70 60 L85 80 L75 75 L60 95 L45 75 L35 80 L50 60 L35 40 L45 45 Z"
-      fill="#2563eb"
-    />
-    <circle cx="60" cy="60" r="12" fill="white" />
-    <circle cx="60" cy="60" r="8" fill="#2563eb" />
-  </svg>
+  <EliLogo size={160} className="login-logo" />
 );
 
 export default function Login({ onLogin }: Props) {
