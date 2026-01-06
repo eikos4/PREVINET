@@ -5,6 +5,8 @@ import {
   downloadBlobAsFile,
   getSignedDocumentPdfByKey,
 } from "./documentsPdf.service";
+import { generateMasterDocumentPdf, buildMasterDocumentPdfFileName } from "./documentsMasterPdf.service";
+
 
 export default function DocumentList() {
   const [docs, setDocs] = useState<DocumentRecord[]>([]);
@@ -165,7 +167,25 @@ export default function DocumentList() {
 
                   {isExpanded && (
                     <div className="border-t border-gray-200 bg-gray-50/50 p-6">
-                      <div className="mb-4">
+                      <div className="mb-4 flex gap-2">
+                        <button
+                          type="button"
+                          className="bg-purple-600 hover:bg-purple-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors"
+                          onClick={async (e) => {
+                            e.stopPropagation();
+                            try {
+                              const pdf = await generateMasterDocumentPdf(d);
+                              const fileName = buildMasterDocumentPdfFileName(d);
+                              downloadBlobAsFile(pdf, fileName);
+                            } catch (error) {
+                              console.error("Error generating master PDF:", error);
+                              alert("Error al generar PDF maestro");
+                            }
+                          }}
+                        >
+                          📄 Descargar PDF Maestro
+                        </button>
+
                         <button
                           type="button"
                           className="bg-white border border-gray-200 hover:border-blue-200 hover:shadow-sm text-gray-900 px-4 py-2 rounded-lg text-sm font-medium transition-all"

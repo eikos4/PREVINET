@@ -2,6 +2,8 @@ import { useEffect, useMemo, useState } from "react";
 import { getFitForWork } from "./fitForWork.service";
 import type { FitForWork } from "./fitForWork.service";
 import { downloadBlobAsFile, getSignedFitForWorkPdfByKey } from "./fitForWorkPdf.service";
+import { generateMasterFitForWorkPdf, buildMasterFitForWorkPdfFileName } from "./fitForWorkMasterPdf.service";
+
 
 export default function FitForWorkList() {
   const [evaluations, setEvaluations] = useState<FitForWork[]>([]);
@@ -161,75 +163,100 @@ export default function FitForWorkList() {
                     </div>
                   </button>
 
-                  {isExpanded && completedAssignments.length > 0 && (
+                  {isExpanded && (
                     <div className="border-t border-gray-200 bg-gray-50/50 p-6">
-                      <h5 className="text-sm font-bold text-gray-900 mb-4 m-0">📝 Evaluaciones Completadas</h5>
-
-                      <div className="space-y-3">
-                        {completedAssignments.map((a) => {
-                          const name = a.firmadoPorNombre ?? "(sin nombre)";
-                          const rut = a.firmadoPorRut ?? "";
-                          const when = a.firmadoEn ? formatDateTime(a.firmadoEn) : "";
-                          const apto = a.apto ?? false;
-                          const key = `${e.id}_${a.workerId}_${a.token}`;
-
-                          return (
-                            <div
-                              key={key}
-                              className="bg-white border border-gray-200 rounded-lg p-4 flex items-center justify-between gap-4 hover:border-green-200 hover:shadow-sm transition-all"
-                            >
-                              <div className="flex-1">
-                                <p className="text-sm font-semibold text-gray-900 m-0">
-                                  {name}
-                                  {rut ? ` (${rut})` : ""}
-                                </p>
-                                <p className="text-xs text-gray-500 mt-1 m-0">{when}</p>
-                                <div className="mt-2">
-                                  {apto ? (
-                                    <span className="inline-block bg-green-100 text-green-700 px-2 py-1 rounded text-xs font-semibold">
-                                      ✓ APTO PARA TRABAJAR
-                                    </span>
-                                  ) : (
-                                    <span className="inline-block bg-red-100 text-red-700 px-2 py-1 rounded text-xs font-semibold">
-                                      ✗ NO APTO PARA TRABAJAR
-                                    </span>
-                                  )}
-                                </div>
-                              </div>
-                              <button
-                                type="button"
-                                className="flex-shrink-0 bg-green-600 hover:bg-green-700 disabled:bg-gray-400 disabled:cursor-not-allowed text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors"
-                                disabled={downloadingKey === key}
-                                onClick={async (ev) => {
-                                  ev.stopPropagation();
-                                  setDownloadError("");
-                                  setDownloadingKey(key);
-                                  try {
-                                    const rec = await getSignedFitForWorkPdfByKey({
-                                      fitForWorkId: e.id,
-                                      workerId: a.workerId,
-                                      token: a.token,
-                                    });
-
-                                    if (!rec) {
-                                      throw new Error("No se encontró el PDF firmado para este trabajador");
-                                    }
-
-                                    downloadBlobAsFile(rec.pdf, rec.fileName);
-                                  } catch (err) {
-                                    const msg = err instanceof Error ? err.message : "No se pudo descargar el PDF";
-                                    setDownloadError(msg);
-                                  } finally {
-                                    setDownloadingKey(null);
-                                  }
-                                }}
-                              >
-                                {downloadingKey === key ? "Descargando…" : "Descargar PDF"}
-                              </button>
-                            </div>
-                          );
-                        })}
+                      <div className="mb-4">
+                        <button
+                          type="button"
+                          className="bg-purple-600 hover:bg-purple-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors"
+                          onClick={async (ev) => {
+                            ev.stopPropagation();
+                            try {
+                              const pdf = await generateMasterFitForWorkPdf(e);
+                              const fileName = buildMasterFitForWorkPdfFileName(e);
+                              downloadBlobAsFile(pdf, fileName);
+                            } catch (error) {
+                              console.error("Error generating master PDF:", error);
+                              alert("Error al generar PDF maestro");
+                            }
+                          }}
+                        >
+                          📄 Descargar PDF Maestro
+                        </button>
                       </div>
+
+                      {completedAssignments.length > 0 ? (
+                        <>
+                          <h5 className="text-sm font-bold text-gray-900 mb-4 m-0">📝 Evaluaciones Completadas</h5>
+                          <div className="space-y-3">
+                            {completedAssignments.map((a) => {
+                              const name = a.firmadoPorNombre ?? "(sin nombre)";
+                              const rut = a.firmadoPorRut ?? "";
+                              const when = a.firmadoEn ? formatDateTime(a.firmadoEn) : "";
+                              const apto = a.apto ?? false;
+                              const key = `${e.id}_${a.workerId}_${a.token}`;
+
+                              return (
+                                <div
+                                  key={key}
+                                  className="bg-white border border-gray-200 rounded-lg p-4 flex items-center justify-between gap-4 hover:border-green-200 hover:shadow-sm transition-all"
+                                >
+                                  <div className="flex-1">
+                                    <p className="text-sm font-semibold text-gray-900 m-0">
+                                      {name}
+                                      {rut ? ` (${rut})` : ""}
+                                    </p>
+                                    <p className="text-xs text-gray-500 mt-1 m-0">{when}</p>
+                                    <div className="mt-2">
+                                      {apto ? (
+                                        <span className="inline-block bg-green-100 text-green-700 px-2 py-1 rounded text-xs font-semibold">
+                                          ✓ APTO PARA TRABAJAR
+                                        </span>
+                                      ) : (
+                                        <span className="inline-block bg-red-100 text-red-700 px-2 py-1 rounded text-xs font-semibold">
+                                          ✗ NO APTO PARA TRABAJAR
+                                        </span>
+                                      )}
+                                    </div>
+                                  </div>
+                                  <button
+                                    type="button"
+                                    className="flex-shrink-0 bg-green-600 hover:bg-green-700 disabled:bg-gray-400 disabled:cursor-not-allowed text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors"
+                                    disabled={downloadingKey === key}
+                                    onClick={async (ev) => {
+                                      ev.stopPropagation();
+                                      setDownloadError("");
+                                      setDownloadingKey(key);
+                                      try {
+                                        const rec = await getSignedFitForWorkPdfByKey({
+                                          fitForWorkId: e.id,
+                                          workerId: a.workerId,
+                                          token: a.token,
+                                        });
+
+                                        if (!rec) {
+                                          throw new Error("No se encontró el PDF firmado para este trabajador");
+                                        }
+
+                                        downloadBlobAsFile(rec.pdf, rec.fileName);
+                                      } catch (err) {
+                                        const msg = err instanceof Error ? err.message : "No se pudo descargar el PDF";
+                                        setDownloadError(msg);
+                                      } finally {
+                                        setDownloadingKey(null);
+                                      }
+                                    }}
+                                  >
+                                    {downloadingKey === key ? "Descargando…" : "Descargar PDF"}
+                                  </button>
+                                </div>
+                              );
+                            })}
+                          </div>
+                        </>
+                      ) : (
+                        <p className="text-sm text-gray-500 italic m-0">No hay evaluaciones completadas todavía.</p>
+                      )}
                     </div>
                   )}
                 </div>

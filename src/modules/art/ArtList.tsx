@@ -2,6 +2,8 @@ import { useEffect, useState } from "react";
 import { getARTs } from "./art.service";
 import type { ART } from "./art.service";
 import { downloadBlobAsFile, getSignedArtPdfByKey } from "./artPdf.service";
+import { generateMasterArtPdf, buildMasterArtPdfFileName } from "./artMasterPdf.service";
+
 
 export default function ArtList() {
   const [arts, setArts] = useState<ART[]>([]);
@@ -155,12 +157,28 @@ export default function ArtList() {
                     </div>
                   </button>
 
-                  {isExpanded && signedAssignments.length > 0 && (
+                  {isExpanded && (
                     <div className="border-t border-gray-200 bg-gray-50/50 p-6">
-                      <h5 className="text-sm font-bold text-gray-900 mb-4 m-0">📝 Firmas Registradas</h5>
+                      <div className="mb-4 flex gap-2">
+                        <button
+                          type="button"
+                          className="bg-purple-600 hover:bg-purple-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors"
+                          onClick={async (e) => {
+                            e.stopPropagation();
+                            try {
+                              const pdf = await generateMasterArtPdf(a);
+                              const fileName = buildMasterArtPdfFileName(a);
+                              downloadBlobAsFile(pdf, fileName);
+                            } catch (error) {
+                              console.error("Error generating master PDF:", error);
+                              alert("Error al generar PDF maestro");
+                            }
+                          }}
+                        >
+                          📄 Descargar PDF Maestro
+                        </button>
 
-                      {a.attachment?.blob && a.attachment.fileName && (
-                        <div className="mb-4">
+                        {a.attachment?.blob && a.attachment.fileName && (
                           <button
                             type="button"
                             className="bg-white border border-gray-200 hover:border-blue-200 hover:shadow-sm text-gray-900 px-4 py-2 rounded-lg text-sm font-medium transition-all"
@@ -168,61 +186,68 @@ export default function ArtList() {
                           >
                             Descargar archivo original
                           </button>
-                        </div>
-                      )}
-
-                      <div className="space-y-3">
-                        {signedAssignments.map((x) => {
-                          const name = x.firmadoPorNombre ?? "(sin nombre)";
-                          const rut = x.firmadoPorRut ?? "";
-                          const when = x.firmadoEn ? formatDateTime(x.firmadoEn) : "";
-                          const key = `${a.id}_${x.workerId}_${x.token}`;
-
-                          return (
-                            <div
-                              key={key}
-                              className="bg-white border border-gray-200 rounded-lg p-4 flex items-center justify-between gap-4 hover:border-blue-200 hover:shadow-sm transition-all"
-                            >
-                              <div>
-                                <p className="text-sm font-semibold text-gray-900 m-0">
-                                  {name}{rut ? ` (${rut})` : ""}
-                                </p>
-                                <p className="text-xs text-gray-500 mt-1 m-0">{when}</p>
-                              </div>
-                              <button
-                                type="button"
-                                className="flex-shrink-0 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors"
-                                disabled={downloadingKey === key}
-                                onClick={async (e) => {
-                                  e.stopPropagation();
-                                  setDownloadError("");
-                                  setDownloadingKey(key);
-                                  try {
-                                    const rec = await getSignedArtPdfByKey({
-                                      artId: a.id,
-                                      workerId: x.workerId,
-                                      token: x.token,
-                                    });
-
-                                    if (!rec) {
-                                      throw new Error("No se encontró el PDF firmado para este trabajador");
-                                    }
-
-                                    downloadBlobAsFile(rec.pdf, rec.fileName);
-                                  } catch (e) {
-                                    const msg = e instanceof Error ? e.message : "No se pudo descargar el PDF";
-                                    setDownloadError(msg);
-                                  } finally {
-                                    setDownloadingKey(null);
-                                  }
-                                }}
-                              >
-                                {downloadingKey === key ? "Descargando…" : "Descargar PDF"}
-                              </button>
-                            </div>
-                          );
-                        })}
+                        )}
                       </div>
+
+                      {signedAssignments.length > 0 ? (
+                        <>
+                          <h5 className="text-sm font-bold text-gray-900 mb-4 m-0">📝 Firmas Registradas</h5>
+                          <div className="space-y-3">
+                            {signedAssignments.map((x) => {
+                              const name = x.firmadoPorNombre ?? "(sin nombre)";
+                              const rut = x.firmadoPorRut ?? "";
+                              const when = x.firmadoEn ? formatDateTime(x.firmadoEn) : "";
+                              const key = `${a.id}_${x.workerId}_${x.token}`;
+
+                              return (
+                                <div
+                                  key={key}
+                                  className="bg-white border border-gray-200 rounded-lg p-4 flex items-center justify-between gap-4 hover:border-blue-200 hover:shadow-sm transition-all"
+                                >
+                                  <div>
+                                    <p className="text-sm font-semibold text-gray-900 m-0">
+                                      {name}{rut ? ` (${rut})` : ""}
+                                    </p>
+                                    <p className="text-xs text-gray-500 mt-1 m-0">{when}</p>
+                                  </div>
+                                  <button
+                                    type="button"
+                                    className="flex-shrink-0 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors"
+                                    disabled={downloadingKey === key}
+                                    onClick={async (e) => {
+                                      e.stopPropagation();
+                                      setDownloadError("");
+                                      setDownloadingKey(key);
+                                      try {
+                                        const rec = await getSignedArtPdfByKey({
+                                          artId: a.id,
+                                          workerId: x.workerId,
+                                          token: x.token,
+                                        });
+
+                                        if (!rec) {
+                                          throw new Error("No se encontró el PDF firmado para este trabajador");
+                                        }
+
+                                        downloadBlobAsFile(rec.pdf, rec.fileName);
+                                      } catch (e) {
+                                        const msg = e instanceof Error ? e.message : "No se pudo descargar el PDF";
+                                        setDownloadError(msg);
+                                      } finally {
+                                        setDownloadingKey(null);
+                                      }
+                                    }}
+                                  >
+                                    {downloadingKey === key ? "Descargando…" : "Descargar PDF"}
+                                  </button>
+                                </div>
+                              );
+                            })}
+                          </div>
+                        </>
+                      ) : (
+                        <p className="text-sm text-gray-500 italic m-0">No hay firmas registradas todavía.</p>
+                      )}
                     </div>
                   )}
                 </div>
