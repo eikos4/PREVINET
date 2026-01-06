@@ -14,6 +14,7 @@ export default function DocumentList() {
   const [docs, setDocs] = useState<DocumentRecord[]>([]);
   const [downloadError, setDownloadError] = useState<string>("");
   const [downloadingKey, setDownloadingKey] = useState<string | null>(null);
+  const [workerSearch, setWorkerSearch] = useState("");
   const [expandedIds, setExpandedIds] = useState<Set<string>>(() => new Set());
   const [allWorkers, setAllWorkers] = useState<Worker[]>([]);
   const [updatingId, setUpdatingId] = useState<string | null>(null);
@@ -196,7 +197,18 @@ export default function DocumentList() {
                           className="bg-white border border-gray-200 hover:border-blue-200 hover:shadow-sm text-gray-900 px-4 py-2 rounded-lg text-sm font-medium transition-all"
                           onClick={() => downloadBlobAsFile(d.attachment.blob, d.attachment.fileName)}
                         >
-                          Descargar archivo original
+                          Descargar original
+                        </button>
+
+                        <button
+                          type="button"
+                          className="bg-blue-50 border border-blue-200 text-blue-700 hover:bg-blue-100 px-4 py-2 rounded-lg text-sm font-medium transition-all"
+                          onClick={() => {
+                            const url = URL.createObjectURL(d.attachment.blob);
+                            window.open(url, "_blank");
+                          }}
+                        >
+                          👁️ Ver Archivo
                         </button>
                       </div>
 
@@ -260,55 +272,69 @@ export default function DocumentList() {
                       )}
 
                       <div className="mt-6 pt-6 border-t border-gray-200">
-                        <h5 className="text-sm font-bold text-gray-900 mb-4 m-0">👷 Asignar Trabajadores</h5>
+                        <div className="flex items-center justify-between mb-4">
+                          <h5 className="text-sm font-bold text-gray-900 m-0">👷 Asignar Trabajadores</h5>
+                          <input
+                            type="text"
+                            placeholder="🔍 Buscar trabajador..."
+                            className="text-xs border border-gray-200 rounded px-2 py-1 w-48 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all"
+                            value={workerSearch}
+                            onChange={(e) => setWorkerSearch(e.target.value)}
+                          />
+                        </div>
                         <p className="text-xs text-gray-500 mb-4 m-0">Selecciona a los trabajadores que deben firmar este documento:</p>
 
                         <div className="worker-select-grid mb-4">
-                          {allWorkers.map((w) => {
-                            const isAssigned = d.asignados.some(a => a.workerId === w.id);
-                            return (
-                              <button
-                                key={w.id}
-                                type="button"
-                                className={`worker-select ${isAssigned ? "selected" : ""}`}
-                                onClick={async () => {
-                                  if (updatingId) return;
-                                  const currentIds = d.asignados.map(a => a.workerId);
-                                  let nextIds: string[];
-                                  if (isAssigned) {
-                                    // Check if already signed
-                                    const a = d.asignados.find(x => x.workerId === w.id);
-                                    if (a?.firmadoEn) {
-                                      alert("No se puede quitar a un trabajador que ya firmó");
-                                      return;
+                          {allWorkers
+                            .filter(w =>
+                              w.nombre.toLowerCase().includes(workerSearch.toLowerCase()) ||
+                              w.rut.includes(workerSearch)
+                            )
+                            .map((w) => {
+                              const isAssigned = d.asignados.some(a => a.workerId === w.id);
+                              return (
+                                <button
+                                  key={w.id}
+                                  type="button"
+                                  className={`worker-select ${isAssigned ? "selected" : ""}`}
+                                  onClick={async () => {
+                                    if (updatingId) return;
+                                    const currentIds = d.asignados.map(a => a.workerId);
+                                    let nextIds: string[];
+                                    if (isAssigned) {
+                                      // Check if already signed
+                                      const a = d.asignados.find(x => x.workerId === w.id);
+                                      if (a?.firmadoEn) {
+                                        alert("No se puede quitar a un trabajador que ya firmó");
+                                        return;
+                                      }
+                                      nextIds = currentIds.filter(id => id !== w.id);
+                                    } else {
+                                      nextIds = [...currentIds, w.id];
                                     }
-                                    nextIds = currentIds.filter(id => id !== w.id);
-                                  } else {
-                                    nextIds = [...currentIds, w.id];
-                                  }
 
-                                  setUpdatingId(d.id);
-                                  try {
-                                    await updateDocumentAssignments(d.id, nextIds);
-                                    const refreshed = await getDocuments();
-                                    setDocs(refreshed);
-                                  } catch (error) {
-                                    console.error(error);
-                                    alert("Error al actualizar asignaciones");
-                                  } finally {
-                                    setUpdatingId(null);
-                                  }
-                                }}
-                                disabled={!!updatingId}
-                              >
-                                <span className="worker-initial">{w.nombre.charAt(0).toUpperCase()}</span>
-                                <div>
-                                  <div className="text-sm font-medium">{w.nombre}</div>
-                                  <div className="text-[10px] opacity-70">{w.rut}</div>
-                                </div>
-                              </button>
-                            );
-                          })}
+                                    setUpdatingId(d.id);
+                                    try {
+                                      await updateDocumentAssignments(d.id, nextIds);
+                                      const refreshed = await getDocuments();
+                                      setDocs(refreshed);
+                                    } catch (error) {
+                                      console.error(error);
+                                      alert("Error al actualizar asignaciones");
+                                    } finally {
+                                      setUpdatingId(null);
+                                    }
+                                  }}
+                                  disabled={!!updatingId}
+                                >
+                                  <span className="worker-initial">{w.nombre.charAt(0).toUpperCase()}</span>
+                                  <div>
+                                    <div className="text-sm font-medium">{w.nombre}</div>
+                                    <div className="text-[10px] opacity-70">{w.rut}</div>
+                                  </div>
+                                </button>
+                              );
+                            })}
                         </div>
                         {updatingId === d.id && <p className="text-xs text-blue-600 animate-pulse">Actualizando asignaciones...</p>}
                       </div>
