@@ -1,6 +1,8 @@
 import { useEffect, useMemo, useState } from "react";
-import { getDocuments } from "./documents.service";
+import { getDocuments, updateDocumentAssignments } from "./documents.service";
 import type { DocumentRecord } from "./documents.service";
+import { getWorkers } from "../workers/worker.service";
+import type { Worker } from "../workers/worker.service";
 import {
   downloadBlobAsFile,
   getSignedDocumentPdfByKey,
@@ -13,9 +15,12 @@ export default function DocumentList() {
   const [downloadError, setDownloadError] = useState<string>("");
   const [downloadingKey, setDownloadingKey] = useState<string | null>(null);
   const [expandedIds, setExpandedIds] = useState<Set<string>>(() => new Set());
+  const [allWorkers, setAllWorkers] = useState<Worker[]>([]);
+  const [updatingId, setUpdatingId] = useState<string | null>(null);
 
   useEffect(() => {
     getDocuments().then((list) => setDocs(list));
+    getWorkers().then((list) => setAllWorkers(list.filter(w => w.habilitado)));
   }, []);
 
   const sorted = useMemo(() => {
@@ -253,6 +258,60 @@ export default function DocumentList() {
                           </div>
                         </>
                       )}
+
+                      <div className="mt-6 pt-6 border-t border-gray-200">
+                        <h5 className="text-sm font-bold text-gray-900 mb-4 m-0">👷 Asignar Trabajadores</h5>
+                        <p className="text-xs text-gray-500 mb-4 m-0">Selecciona a los trabajadores que deben firmar este documento:</p>
+
+                        <div className="worker-select-grid mb-4">
+                          {allWorkers.map((w) => {
+                            const isAssigned = d.asignados.some(a => a.workerId === w.id);
+                            return (
+                              <button
+                                key={w.id}
+                                type="button"
+                                className={`worker-select ${isAssigned ? "selected" : ""}`}
+                                onClick={async () => {
+                                  if (updatingId) return;
+                                  const currentIds = d.asignados.map(a => a.workerId);
+                                  let nextIds: string[];
+                                  if (isAssigned) {
+                                    // Check if already signed
+                                    const a = d.asignados.find(x => x.workerId === w.id);
+                                    if (a?.firmadoEn) {
+                                      alert("No se puede quitar a un trabajador que ya firmó");
+                                      return;
+                                    }
+                                    nextIds = currentIds.filter(id => id !== w.id);
+                                  } else {
+                                    nextIds = [...currentIds, w.id];
+                                  }
+
+                                  setUpdatingId(d.id);
+                                  try {
+                                    await updateDocumentAssignments(d.id, nextIds);
+                                    const refreshed = await getDocuments();
+                                    setDocs(refreshed);
+                                  } catch (error) {
+                                    console.error(error);
+                                    alert("Error al actualizar asignaciones");
+                                  } finally {
+                                    setUpdatingId(null);
+                                  }
+                                }}
+                                disabled={!!updatingId}
+                              >
+                                <span className="worker-initial">{w.nombre.charAt(0).toUpperCase()}</span>
+                                <div>
+                                  <div className="text-sm font-medium">{w.nombre}</div>
+                                  <div className="text-[10px] opacity-70">{w.rut}</div>
+                                </div>
+                              </button>
+                            );
+                          })}
+                        </div>
+                        {updatingId === d.id && <p className="text-xs text-blue-600 animate-pulse">Actualizando asignaciones...</p>}
+                      </div>
                     </div>
                   )}
                 </div>

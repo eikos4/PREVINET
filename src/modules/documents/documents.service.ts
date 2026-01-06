@@ -122,3 +122,32 @@ export async function signDocument(
 
   return updated;
 }
+export async function updateDocumentAssignments(
+  documentId: string,
+  workerIds: string[]
+) {
+  const doc = (await db.table("documents").get(documentId)) as DocumentRecord | undefined;
+  if (!doc) throw new Error("Documento no encontrado");
+
+  // Mantener los que ya están firmados, agregar los nuevos
+  const existingAssignments = doc.asignados || [];
+  const newAssignments: DocumentWorkerAssignment[] = [...existingAssignments];
+
+  workerIds.forEach((wid) => {
+    if (!newAssignments.some((a) => a.workerId === wid)) {
+      newAssignments.push({
+        workerId: wid,
+        token: crypto.randomUUID(),
+      });
+    }
+  });
+
+  // (Opcional) Quitar los que no están en la nueva lista SI no han firmado todavía
+  const finalAssignments = newAssignments.filter((a) => {
+    if (a.firmadoEn) return true; // Si ya firmó, se queda
+    return workerIds.includes(a.workerId); // Si no ha firmado, debe estar en la nueva lista
+  });
+
+  await db.table("documents").update(documentId, { asignados: finalAssignments });
+  await addToSyncQueue("document");
+}

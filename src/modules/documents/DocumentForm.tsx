@@ -54,10 +54,6 @@ export default function DocumentForm({
       return;
     }
 
-    if (selected.length === 0) {
-      setError("Selecciona al menos un trabajador");
-      return;
-    }
 
     await addDocument({
       obra,
@@ -98,7 +94,7 @@ export default function DocumentForm({
 
       <div className="p-6">
         <p className="text-sm text-gray-500" style={{ marginTop: 0 }}>
-          Sube un archivo (PDF/Word/Excel/otros), asígnalo a trabajadores y registra su firma.
+          Sube un archivo (PDF/Word/Excel/otros). Puedes asignarlo a trabajadores ahora o más tarde desde la lista de abajo.
         </p>
 
         <div className="form-grid">

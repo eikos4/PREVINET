@@ -27,6 +27,10 @@ import TalkForm from "../modules/talks/TalkForm";
 import TalkList from "../modules/talks/TalkList";
 import TalkWorkerList from "../modules/talks/TalkWorkerList";
 
+import DocumentForm from "../modules/documents/DocumentForm";
+import DocumentList from "../modules/documents/DocumentList";
+import DocumentWorkerList from "../modules/documents/DocumentWorkerList";
+
 import FitForWorkForm from "../modules/fitForWork/FitForWorkForm";
 import FitForWorkList from "../modules/fitForWork/FitForWorkList";
 import FitForWorkWorkerList from "../modules/fitForWork/FitForWorkWorkerList";
@@ -46,7 +50,6 @@ import TemplatesView from "../modules/templates/TemplatesView";
 import ExcelTemplatesView from "../modules/templates/ExcelTemplatesView";
 
 import PrevencionistaTimelineView from "../modules/prevencionista/PrevencionistaTimelineView";
-import AIAssistant from "../modules/aiAssistant/AIAssistant";
 import FloatingAIAssistant from "../modules/aiAssistant/FloatingAIAssistant";
 
 import {
@@ -73,7 +76,7 @@ import { pullFromSupabase } from "../services/sync.service";
 import { APP_MODULES } from "./modules.registry";
 
 type View = "landing" | "login" | "app";
-type Section = "inicio" | "dashboard" | "workers" | "workerTimeline" | "art" | "profile" | "irl" | "talks" | "fitForWork" | "findingIncidents" | "templates" | "excelTemplates" | "obras" | "empresas" | "adminUsers" | "aiAssistant";
+type Section = "inicio" | "dashboard" | "workers" | "workerTimeline" | "art" | "profile" | "irl" | "talks" | "fitForWork" | "findingIncidents" | "templates" | "excelTemplates" | "obras" | "empresas" | "adminUsers" | "aiAssistant" | "documents";
 
 export default function App() {
   const [view, setView] = useState<View>("landing");
@@ -656,6 +659,32 @@ export default function App() {
                   />
                 )}
                 <ArtList key={`a-${reload}`} />
+              </>
+            )}
+          </>
+        )}
+
+        {section === "documents" && (
+          <>
+            {role === "trabajador" ? (
+              worker ? (
+                <DocumentWorkerList worker={worker} key={`dw-${reload}`} />
+              ) : (
+                <div className="card">
+                  <p style={{ margin: 0, color: "#64748b" }}>
+                    Cargando documentos…
+                  </p>
+                </div>
+              )
+            ) : (
+              <>
+                {!readOnly && (
+                  <DocumentForm
+                    creadoPorUserId={user.id}
+                    onCreated={() => setReload((r) => r + 1)}
+                  />
+                )}
+                <DocumentList key={`d-${reload}`} />
               </>
             )}
           </>

@@ -16,7 +16,8 @@ export type AppSection =
   | "obras"
   | "empresas"
   | "adminUsers"
-  | "aiAssistant";
+  | "aiAssistant"
+  | "documents";
 
 export type AppModuleDefinition = {
   key: AppSection;
@@ -88,8 +89,14 @@ export const APP_MODULES: AppModuleDefinition[] = [
   },
   {
     key: "templates",
-    label: "Documentos",
-    icon: "📄",
+    label: "Plantillas/Modelos",
+    icon: "🗂️",
+    allowedRoles: ["prevencionista", "supervisor", "auditor", "superadmin"],
+  },
+  {
+    key: "documents",
+    label: "Documentos Operativos",
+    icon: "📎",
     allowedRoles: ["prevencionista", "supervisor", "auditor", "superadmin"],
   },
   {
