@@ -548,7 +548,7 @@ body {
 
 .notifications-panel-wrapper {
   position: absolute;
-  right: 0;
+  left: 0;
   top: 100%;
   margin-top: 12px;
   z-index: 9999;
@@ -560,8 +560,10 @@ body {
   box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1);
   border: 1px solid #e2e8f0;
   border-radius: 12px;
-  overflow: hidden;
+  overflow: visible;
+  /* Changed from hidden to show the arrow */
   animation: slideDown 0.2s ease-out;
+  position: relative;
 }
 
 @keyframes slideDown {
@@ -594,14 +596,17 @@ body {
 .notifications-panel::before {
   content: '';
   position: absolute;
-  left: -7px;
-  top: 20px;
+  left: 14px;
+  top: -7px;
   width: 14px;
   height: 14px;
   background: white;
   transform: rotate(45deg);
-  box-shadow: -3px -3px 6px rgba(0, 0, 0, 0.04);
+  border-left: 1px solid #e2e8f0;
+  border-top: 1px solid #e2e8f0;
+  z-index: 2;
 }
+
 
 .notifications-panel-header {
   padding: 1rem;
