@@ -12,9 +12,6 @@ export type RiskAnalysis = {
     rawResponse: string;
 };
 
-const OPENROUTER_API_KEY = import.meta.env.VITE_OPENROUTER_API_KEY;
-const OPENROUTER_API_URL = "https://openrouter.ai/api/v1/chat/completions";
-
 const SYSTEM_PROMPT = `Eres un experto en prevención de riesgos laborales en construcción en Chile.
 Analiza imágenes de sitios de trabajo e identifica riesgos según la normativa chilena (Ley 16.744, DS 594, etc.).
 
@@ -35,10 +32,6 @@ export async function analyzeWorkSiteImage(
     imageBase64: string,
     userPrompt: string
 ): Promise<{ response: string; analysis: RiskAnalysis | null }> {
-    if (!OPENROUTER_API_KEY || OPENROUTER_API_KEY === "sk-or-v1-your-key-here") {
-        throw new Error("OpenRouter API key no configurada. Revisa tu archivo .env");
-    }
-
     const messages = [
         {
             role: "system",
@@ -61,27 +54,26 @@ export async function analyzeWorkSiteImage(
         },
     ];
 
+    // Use the secure backend endpoint
+    const BACKEND_API_URL = "/api/analyze";
+
     try {
-        const response = await fetch(OPENROUTER_API_URL, {
+        const response = await fetch(BACKEND_API_URL, {
             method: "POST",
             headers: {
                 "Content-Type": "application/json",
-                Authorization: `Bearer ${OPENROUTER_API_KEY}`,
-                "HTTP-Referer": window.location.origin,
-                "X-Title": "Previnet - AI Risk Analysis",
+                // Authentication handled by backend
             },
             body: JSON.stringify({
-                model: "google/gemini-2.0-flash-exp:free",
+                model: "openai/gpt-4o-mini",
                 messages,
-                temperature: 0.7,
-                max_tokens: 1000,
             }),
         });
 
         if (!response.ok) {
             const errorData = await response.json().catch(() => ({}));
             throw new Error(
-                `OpenRouter API error: ${response.status} - ${errorData.error?.message || response.statusText}`
+                `Backend API error: ${response.status} - ${errorData.error || response.statusText}`
             );
         }
 
@@ -95,7 +87,7 @@ export async function analyzeWorkSiteImage(
             analysis,
         };
     } catch (error) {
-        console.error("Error calling OpenRouter API:", error);
+        console.error("Error calling AI API:", error);
         throw error;
     }
 }
@@ -103,10 +95,6 @@ export async function analyzeWorkSiteImage(
 export async function chatWithAssistant(
     messages: AIMessage[]
 ): Promise<string> {
-    if (!OPENROUTER_API_KEY || OPENROUTER_API_KEY === "sk-or-v1-your-key-here") {
-        throw new Error("OpenRouter API key no configurada. Revisa tu archivo .env");
-    }
-
     const formattedMessages = [
         {
             role: "system",
@@ -118,34 +106,33 @@ export async function chatWithAssistant(
         })),
     ];
 
+    // Use the secure backend endpoint
+    const BACKEND_API_URL = "/api/analyze";
+
     try {
-        const response = await fetch(OPENROUTER_API_URL, {
+        const response = await fetch(BACKEND_API_URL, {
             method: "POST",
             headers: {
                 "Content-Type": "application/json",
-                Authorization: `Bearer ${OPENROUTER_API_KEY}`,
-                "HTTP-Referer": window.location.origin,
-                "X-Title": "Previnet - AI Assistant",
+                // Authentication handled by backend
             },
             body: JSON.stringify({
                 model: "google/gemini-2.0-flash-exp:free",
                 messages: formattedMessages,
-                temperature: 0.7,
-                max_tokens: 800,
             }),
         });
 
         if (!response.ok) {
             const errorData = await response.json().catch(() => ({}));
             throw new Error(
-                `OpenRouter API error: ${response.status} - ${errorData.error?.message || response.statusText}`
+                `Backend API error: ${response.status} - ${errorData.error || response.statusText}`
             );
         }
 
         const data = await response.json();
         return data.choices?.[0]?.message?.content || "No pude generar una respuesta.";
     } catch (error) {
-        console.error("Error calling OpenRouter API:", error);
+        console.error("Error calling AI API:", error);
         throw error;
     }
 }
